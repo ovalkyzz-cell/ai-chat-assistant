@@ -9,15 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script>
-    (function() {
-        var raw = localStorage.getItem('mazval_user');
-        if (!raw) { window.location.href = 'login.html'; return; }
+    // AUTH CHECK - runs before body
+    var _au = localStorage.getItem('mazval_user');
+    if (!_au) { document.write('<script>location.href="login.html"<\/script>'); }
+    else {
         try {
-            var u = JSON.parse(raw);
-            if (u.status === 'approved') { window.location.href = 'index.html'; return; }
-            if (u.status !== 'pending') { window.location.href = 'login.html'; return; }
-        } catch(e) { window.location.href = 'login.html'; }
-    })();
+            var _u = JSON.parse(_au);
+            if (_u.status === 'approved') { document.write('<script>location.href="index.html"<\/script>'); }
+            else if (_u.status !== 'pending') { document.write('<script>location.href="login.html"<\/script>'); }
+        } catch(e) { document.write('<script>location.href="login.html"<\/script>'); }
+    }
     </script>
 </head>
 <body>
