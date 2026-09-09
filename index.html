@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="logo-img">
+                    <span class="logo-text">AI Chat</span>
+                </div>
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fas fa-plus"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+
+            <!-- Sidebar Navigation -->
+            <div class="sidebar-nav">
+                <button class="nav-tab active" data-tab="chats">
+                    <i class="fas fa-comments"></i>
+                    <span>Chats</span>
+                </button>
+                <button class="nav-tab" data-tab="tools">
+                    <i class="fas fa-tools"></i>
+                    <span>Tools</span>
+                </button>
+                <button class="nav-tab" data-tab="downloaders">
+                    <i class="fas fa-download"></i>
+                    <span>Downloaders</span>
+                </button>
+            </div>
+
+            <!-- Chat History -->
+            <div class="sidebar-content" id="chatsPanel">
+                <div class="history-section">
+                    <div class="history-label">Today</div>
+                    <div id="chatList"></div>
+                </div>
+            </div>
+
+            <!-- Tools Panel -->
+            <div class="sidebar-content hidden" id="toolsPanel">
+                <div class="tools-list">
+                    <div class="tool-item" data-tool="cek-nomor">
+                        <i class="fas fa-phone-alt"></i>
+                        <span>Cek Nomor</span>
+                    </div>
+                    <div class="tool-item" data-tool="otp">
+                        <i class="fas fa-key"></i>
+                        <span>OTP Generator</span>
+                    </div>
+                    <div class="tool-item" data-tool="ssweb">
+                        <i class="fas fa-camera"></i>
+                        <span>Screenshot Web</span>
+                    </div>
+                    <div class="tool-item" data-tool="translate">
+                        <i class="fas fa-language"></i>
+                        <span>Translate</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downloaders Panel -->
+            <div class="sidebar-content hidden" id="downloadersPanel">
+                <div class="tools-list">
+                    <div class="tool-item" data-downloader="instagram">
+                        <i class="fab fa-instagram"></i>
+                        <span>Instagram</span>
+                    </div>
+                    <div class="tool-item" data-downloader="facebook">
+                        <i class="fab fa-facebook"></i>
+                        <span>Facebook</span>
+                    </div>
+                    <div class="tool-item" data-downloader="tiktok">
+                        <i class="fab fa-tiktok"></i>
+                        <span>TikTok</span>
+                    </div>
+                    <div class="tool-item" data-downloader="twitter">
+                        <i class="fab fa-twitter"></i>
+                        <span>Twitter/X</span>
+                    </div>
+                    <div class="tool-item" data-downloader="youtube">
+                        <i class="fab fa-youtube"></i>
+                        <span>YouTube</span>
+                    </div>
+                    <div class="tool-item" data-downloader="youtube-mp3">
+                        <i class="fas fa-music"></i>
+                        <span>YouTube MP3</span>
+                    </div>
+                    <div class="tool-item" data-downloader="spotify">
+                        <i class="fab fa-spotify"></i>
+                        <span>Spotify</span>
+                    </div>
+                    <div class="tool-item" data-downloader="safefileku">
+                        <i class="fas fa-file-download"></i>
+                        <span>SafeFileKu</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span class="user-name" id="userName">User</span>
+                </div>
+                <a href="login.html" class="logout-btn" id="logoutBtn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-brand">
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="header-logo">
+                    <h1 class="chat-title">AI Chat Assistant</h1>
+                </div>
+                <div class="model-selector">
+                    <label>Model:</label>
+                    <select id="modelSelect">
+                        <optgroup label="AI Models">
+                            <option value="chatgpt">ChatGPT</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="copilot">Copilot</option>
+                            <option value="apertus">Apertus</option>
+                            <option value="claude-opus">Claude Opus</option>
+                            <option value="mistral">Mistral</option>
+                            <option value="felo">Felo</option>
+                            <option value="turboseek">TurboSeek</option>
+                        </optgroup>
+                        <optgroup label="Image Generation">
+                            <option value="image">AI Image Generator</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-icon">
+                        <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat Logo">
+                    </div>
+                    <h2>How can I help you today?</h2>
+                    <p>Choose a model and start chatting</p>
+                    <div class="suggestion-cards">
+                        <div class="suggestion-card" data-prompt="Explain quantum entanglement in simple terms">
+                            <i class="fas fa-atom"></i>
+                            <span>Explain quantum entanglement</span>
+                        </div>
+                        <div class="suggestion-card" data-prompt="Write a Python function to sort a list">
+                            <i class="fas fa-code"></i>
+                            <span>Write code example</span>
+                        </div>
+                        <div class="suggestion-card" data-prompt="What are the best foods to try in Japan?">
+                            <i class="fas fa-utensils"></i>
+                            <span>Japanese food recommendations</span>
+                        </div>
+                        <div class="suggestion-card" data-prompt="Give me 3 startup ideas">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Startup ideas</span>
+                        </div>
+                        <div class="suggestion-card" data-prompt="What is the meaning of life?">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Philosophy question</span>
+                        </div>
+                        <div class="suggestion-card" data-prompt="a beautiful sunset over the ocean, digital art">
+                            <i class="fas fa-image"></i>
+                            <span>Generate an image</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tool Interface (hidden by default) -->
+                <div class="tool-interface hidden" id="toolInterface">
+                    <div class="tool-header">
+                        <button class="back-to-chat" id="backToChat">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back to Chat</span>
+                        </button>
+                        <h2 id="toolTitle">Tool</h2>
+                    </div>
+                    <div class="tool-content" id="toolContent">
+                        <!-- Tool content will be inserted here -->
+                    </div>
+                    <div class="tool-result" id="toolResult">
+                        <!-- Tool result will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div class="messages-container hidden" id="messagesContainer">
+                    <!-- Messages will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area" id="inputArea">
+                <div class="input-container">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Send a message..." 
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <p>AI Chat Assistant &bull; Responses may be inaccurate</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tool Input Modal -->
+    <div class="modal" id="toolModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalToolTitle">Tool</h3>
+                <button class="modal-close" id="closeToolModal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalToolBody">
+                <!-- Tool input form will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelToolModal">Cancel</button>
+                <button class="btn btn-primary" id="executeTool">
+                    <i class="fas fa-play"></i> Execute
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="resultTitle">Result</h3>
+                <button class="modal-close" id="closeResultModal">&times;</button>
+            </div>
+            <div class="modal-body" id="resultBody">
+                <!-- Result will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Block Template -->
+    <template id="codeBlockTemplate">
+        <div class="code-block">
+            <div class="code-header">
+                <span class="language"></span>
+                <button class="copy-btn">
+                    <i class="fas fa-copy"></i>
+                    <span>Copy</span>
+                </button>
+            </div>
+            <pre><code></code></pre>
+        </div>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

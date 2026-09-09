@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AI Chat Assistant</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="admin-brand">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Admin Panel</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#users" class="nav-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                    <span class="badge" id="userCountBadge">0</span>
+                </a>
+                <a href="#pending" class="nav-item" data-section="pending">
+                    <i class="fas fa-clock"></i>
+                    <span>Pending Approvals</span>
+                    <span class="badge warning" id="pendingCountBadge">0</span>
+                </a>
+                <a href="#banned" class="nav-item" data-section="banned">
+                    <i class="fas fa-ban"></i>
+                    <span>Banned Users</span>
+                    <span class="badge danger" id="bannedCountBadge">0</span>
+                </a>
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat App</span>
+                </a>
+                <a href="#" class="nav-item" id="adminLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Header -->
+            <header class="admin-header">
+                <button class="sidebar-toggle" id="adminSidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1 id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="header-actions">
+                    <div class="admin-profile">
+                        <div class="profile-avatar">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <span>Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="admin-content">
+                <!-- Dashboard Section -->
+                <section class="content-section active" id="dashboardSection">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalUsersStat">0</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="activeUsersStat">0</h3>
+                                <p>Active Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon yellow">
+                                <i class="fas fa-user-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="pendingUsersStat">0</h3>
+                                <p>Pending Approval</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red">
+                                <i class="fas fa-user-slash"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="bannedUsersStat">0</h3>
+                                <p>Banned Users</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Recent Registrations</h3>
+                                <a href="#users" class="view-all">View All</a>
+                            </div>
+                            <div class="card-content">
+                                <div id="recentUsersList" class="user-list-compact">
+                                    <p class="empty-state">No recent registrations</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Pending Approvals</h3>
+                                <a href="#pending" class="view-all">View All</a>
+                            </div>
+                            <div class="card-content">
+                                <div id="pendingListDashboard" class="user-list-compact">
+                                    <p class="empty-state">No pending approvals</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Users Section -->
+                <section class="content-section" id="usersSection">
+                    <div class="section-header">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="userSearch" placeholder="Search users...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="active">Active</button>
+                            <button class="filter-btn" data-filter="pending">Pending</button>
+                            <button class="filter-btn" data-filter="banned">Banned</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Users will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Pending Section -->
+                <section class="content-section" id="pendingSection">
+                    <div class="section-header">
+                        <h2>Users Pending Approval</h2>
+                        <button class="btn btn-primary" id="approveAllBtn">
+                            <i class="fas fa-check-double"></i> Approve All
+                        </button>
+                    </div>
+                    <div class="pending-grid" id="pendingGrid">
+                        <p class="empty-state">No pending approvals</p>
+                    </div>
+                </section>
+
+                <!-- Banned Section -->
+                <section class="content-section" id="bannedSection">
+                    <div class="section-header">
+                        <h2>Banned Users</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Banned Date</th>
+                                    <th>Reason</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bannedTableBody">
+                                <!-- Banned users will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Settings Section -->
+                <section class="content-section" id="settingsSection">
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3><i class="fas fa-user-plus"></i> Registration Settings</h3>
+                            <div class="setting-item">
+                                <label>Require Admin Approval</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="requireApproval" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label>Allow Google Login</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="allowGoogleLogin" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
+                            <div class="setting-item">
+                                <label>Two-Factor Authentication</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="enable2FA">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label>Session Timeout (minutes)</label>
+                                <input type="number" id="sessionTimeout" value="30" min="5" max="1440">
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-key"></i> Change Admin Credentials</h3>
+                            <form id="changeAdminCredsForm">
+                                <div class="form-group">
+                                    <label>New Password</label>
+                                    <input type="password" id="newAdminPassword" placeholder="Enter new password">
+                                </div>
+                                <div class="form-group">
+                                    <label>Confirm Password</label>
+                                    <input type="password" id="confirmAdminPassword" placeholder="Confirm new password">
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Password
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- User Actions Modal -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">User Details</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- User details will be inserted here -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <!-- Actions will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>
