@@ -954,8 +954,10 @@ app.patch('/api/admin/discounts/:code', authMiddleware, adminMiddleware, (req, r
 // ========================================
 // START SERVER
 // ========================================
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+if (process.env.VERCEL !== '1') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;
