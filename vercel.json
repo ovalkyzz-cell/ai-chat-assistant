@@ -1,13 +1,32 @@
 {
   "version": 2,
-  "name": "ai-chat-assistant",
   "builds": [
     {
-      "src": "**/*",
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "css/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "img/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
     {
       "src": "/",
       "dest": "/index.html"
@@ -21,6 +40,14 @@
       "dest": "/register.html"
     },
     {
+      "src": "/admin-login",
+      "dest": "/admin-login.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin.html"
+    },
+    {
       "src": "/pricing",
       "dest": "/pricing.html"
     },
@@ -29,31 +56,16 @@
       "dest": "/payment.html"
     },
     {
-      "src": "/admin",
-      "dest": "/admin.html"
+      "src": "/waiting-approval",
+      "dest": "/waiting-approval.html"
     },
     {
-      "src": "/admin-login",
-      "dest": "/admin-login.html"
+      "src": "/account-status",
+      "dest": "/account-status.html"
     },
     {
-      "src": "/reseller",
-      "dest": "/reseller.html"
-    },
-    {
-      "src": "/(.*)",
+      "src": "/(.*\\.(html|css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
       "dest": "/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
     }
   ]
 }

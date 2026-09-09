@@ -53,6 +53,7 @@
         </div>
     </div>
 
+    <script src="js/api.js"></script>
     <script>
     // Simple Toast
     function showToast(msg, type) {
@@ -77,56 +78,35 @@
         }
     })();
 
-    // Hash password
-    function hashPw(p) {
-        var h = 0;
-        for (var i = 0; i < p.length; i++) { h = ((h << 5) - h) + p.charCodeAt(i); h = h & h; }
-        return 'h' + Math.abs(h);
-    }
-
     // Handle Login
-    document.getElementById('loginForm').onsubmit = function(e) {
+    document.getElementById('loginForm').onsubmit = async function(e) {
         e.preventDefault();
         var email = document.getElementById('email').value.trim();
         var pass = document.getElementById('password').value;
 
         if (!email || !pass) { showToast('Fill all fields', 'error'); return; }
 
-        // ADMIN LOGIN
-        if (email === 'admin@mazzvall.com' && pass === 'Admin@Secure123!') {
-            var admin = {id:'admin_001', name:'Admin', email:email, role:'admin', status:'approved', plan:'premium'};
-            localStorage.setItem('mazval_user', JSON.stringify(admin));
-            showToast('Welcome Admin!', 'success');
-            setTimeout(function(){ window.location.href = 'admin.html'; }, 600);
-            return;
+        try {
+            var data = await API.login(email, pass);
+            if (data.success) {
+                var user = data.data.user;
+                localStorage.setItem('mazval_user', JSON.stringify(user));
+                showToast('Login successful!', 'success');
+                setTimeout(function() {
+                    if (user.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else if (user.status === 'approved') {
+                        window.location.href = 'index.html';
+                    } else if (user.status === 'pending') {
+                        window.location.href = 'waiting-approval.html';
+                    } else {
+                        window.location.href = 'account-status.html';
+                    }
+                }, 600);
+            }
+        } catch (error) {
+            showToast(error.error?.message || 'Login failed', 'error');
         }
-
-        // USER LOGIN
-        var users = JSON.parse(localStorage.getItem('mazval_users') || '[]');
-        var user = null;
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email.toLowerCase() === email.toLowerCase()) { user = users[i]; break; }
-        }
-
-        if (!user || user.password !== hashPw(pass)) {
-            showToast('Email or password incorrect', 'error');
-            return;
-        }
-
-        if (user.status === 'pending') {
-            showToast('Account pending approval', 'warning');
-            setTimeout(function(){ window.location.href = 'waiting-approval.html'; }, 600);
-            return;
-        }
-
-        if (user.status === 'rejected' || user.status === 'suspended') {
-            showToast('Account ' + user.status, 'error');
-            return;
-        }
-
-        localStorage.setItem('mazval_user', JSON.stringify(user));
-        showToast('Login successful!', 'success');
-        setTimeout(function(){ window.location.href = 'index.html'; }, 600);
     };
     </script>
 </body>

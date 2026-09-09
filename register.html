@@ -68,6 +68,7 @@
         </div>
     </div>
 
+    <script src="js/api.js"></script>
     <script>
     function showToast(msg, type) {
         var t = document.createElement('div');
@@ -76,12 +77,6 @@
         t.innerHTML = '<i class="fas ' + (icons[type]||'fa-info-circle') + '"></i><span>' + msg + '</span>';
         document.body.appendChild(t);
         setTimeout(function(){ t.remove(); }, 4000);
-    }
-
-    function hashPw(p) {
-        var h = 0;
-        for (var i = 0; i < p.length; i++) { h = ((h << 5) - h) + p.charCodeAt(i); h = h & h; }
-        return 'h' + Math.abs(h);
     }
 
     // Check if already logged in
@@ -96,7 +91,7 @@
         }
     })();
 
-    document.getElementById('registerForm').onsubmit = function(e) {
+    document.getElementById('registerForm').onsubmit = async function(e) {
         e.preventDefault();
         var name = document.getElementById('fullName').value.trim();
         var email = document.getElementById('email').value.trim();
@@ -108,32 +103,15 @@
         if (pass !== confirm) { showToast('Passwords do not match', 'error'); return; }
         if (email === 'admin@mazzvall.com') { showToast('This email is reserved', 'error'); return; }
 
-        var users = JSON.parse(localStorage.getItem('mazval_users') || '[]');
-        for (var i = 0; i < users.length; i++) {
-            if (users[i].email.toLowerCase() === email.toLowerCase()) {
-                showToast('Email already registered', 'error'); return;
+        try {
+            var data = await API.register(name, email, pass);
+            if (data.success) {
+                showToast('Registration successful! Waiting for admin approval.', 'success');
+                setTimeout(function(){ window.location.href = 'waiting-approval.html'; }, 1000);
             }
+        } catch (error) {
+            showToast(error.error?.message || 'Registration failed', 'error');
         }
-
-        var user = {
-            id: 'usr_' + Date.now(),
-            name: name,
-            email: email,
-            password: hashPw(pass),
-            role: 'user',
-            status: 'pending',
-            plan: 'free',
-            createdAt: new Date().toISOString()
-        };
-
-        users.push(user);
-        localStorage.setItem('mazval_users', JSON.stringify(users));
-
-        // Auto login and go to waiting page
-        localStorage.setItem('mazval_user', JSON.stringify(user));
-
-        showToast('Registration successful! Waiting for admin approval.', 'success');
-        setTimeout(function(){ window.location.href = 'waiting-approval.html'; }, 1000);
     };
     </script>
 </body>

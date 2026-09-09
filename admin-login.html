@@ -61,6 +61,7 @@
         <div class="footer-credit"><p>&copy; Created Mazz-Vall</p></div>
     </div>
 
+    <script src="js/api.js"></script>
     <script>
     function showToast(msg, type) {
         var t = document.createElement('div');
@@ -82,13 +83,12 @@
         }
     })();
 
-    document.getElementById('adminLoginForm').onsubmit = function(e) {
+    document.getElementById('adminLoginForm').onsubmit = async function(e) {
         e.preventDefault();
         var key = document.getElementById('adminKey').value.trim();
         var email = document.getElementById('email').value.trim();
         var pass = document.getElementById('password').value;
 
-        // Simple check - hardcoded admin credentials
         if (key !== 'ADMIN@MAZZVALL2024') {
             showToast('Invalid access key', 'error');
             return;
@@ -102,11 +102,17 @@
             return;
         }
 
-        // Save admin session
-        var admin = {id:'admin_001', name:'Admin', email:email, role:'admin', status:'approved', plan:'premium'};
-        localStorage.setItem('mazval_user', JSON.stringify(admin));
-        showToast('Welcome Admin!', 'success');
-        setTimeout(function(){ window.location.href = 'admin.html'; }, 600);
+        try {
+            var data = await API.login(email, pass);
+            if (data.success) {
+                var user = data.data.user;
+                localStorage.setItem('mazval_user', JSON.stringify(user));
+                showToast('Welcome Admin!', 'success');
+                setTimeout(function(){ window.location.href = 'admin.html'; }, 600);
+            }
+        } catch (error) {
+            showToast(error.error?.message || 'Login failed', 'error');
+        }
     };
     </script>
 </body>
