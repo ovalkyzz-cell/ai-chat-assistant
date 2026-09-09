@@ -25,7 +25,7 @@
                 <span>Restricted area - Authorized personnel only</span>
             </div>
 
-            <form class="auth-form" id="adminLoginForm">
+            <form class="auth-form" id="adminLoginForm" onsubmit="return handleAdminLogin(event)">
                 <div class="form-group">
                     <label for="adminKey">Admin Access Key</label>
                     <div class="input-wrapper">
@@ -47,13 +47,13 @@
                     <div class="input-wrapper">
                         <i class="fas fa-lock"></i>
                         <input type="password" id="password" placeholder="Enter password" required>
-                        <button type="button" class="toggle-password">
+                        <button type="button" class="toggle-password" onclick="togglePwd(this)">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
 
-                <button type="submit" class="auth-btn admin-btn">
+                <button type="submit" class="auth-btn admin-btn" id="adminLoginBtn">
                     <span>Access Dashboard</span>
                     <i class="fas fa-arrow-right"></i>
                 </button>
@@ -69,6 +69,65 @@
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
+    <script>
+    function togglePwd(btn) {
+        var input = btn.parentElement.querySelector('input');
+        var icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    function showToast(msg, type) {
+        var existing = document.querySelectorAll('.toast');
+        existing.forEach(function(t) { t.remove(); });
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast ' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i><span>' + msg + '</span>';
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.remove(); }, 4000);
+    }
+
+    function handleAdminLogin(e) {
+        e.preventDefault();
+        var accessKey = document.getElementById('adminKey').value.trim();
+        var email = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+
+        if (accessKey !== 'ADMIN@MAZZVALL2024') {
+            showToast('Invalid access key', 'error');
+            return false;
+        }
+        if (email !== 'admin@mazzvall.com') {
+            showToast('Invalid email', 'error');
+            return false;
+        }
+        if (password !== 'Admin@Secure123!') {
+            showToast('Invalid password', 'error');
+            return false;
+        }
+
+        var session = {
+            id: 'sess_' + Date.now(),
+            userId: 'admin_001',
+            email: email,
+            role: 'admin',
+            status: 'approved',
+            plan: 'premium',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        };
+
+        localStorage.setItem('mazval_currentUser', JSON.stringify(session));
+        showToast('Welcome Admin!', 'success');
+        setTimeout(function() { window.location.href = 'admin.html'; }, 800);
+        return false;
+    }
+    </script>
 </body>
 </html>

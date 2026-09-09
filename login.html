@@ -20,7 +20,7 @@
                 <p>Sign in to continue to Mazval GPT AI</p>
             </div>
 
-            <form class="auth-form" id="loginForm">
+            <form class="auth-form" id="loginForm" onsubmit="return handleLogin(event)">
                 <div class="form-group">
                     <label for="email">Email</label>
                     <div class="input-wrapper">
@@ -34,32 +34,15 @@
                     <div class="input-wrapper">
                         <i class="fas fa-lock"></i>
                         <input type="password" id="password" placeholder="Enter your password" required>
-                        <button type="button" class="toggle-password">
+                        <button type="button" class="toggle-password" onclick="togglePwd(this)">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="form-options">
-                    <label class="checkbox-wrapper">
-                        <input type="checkbox" id="rememberMe">
-                        <span class="checkmark"></span>
-                        Remember me
-                    </label>
-                </div>
-
                 <button type="submit" class="auth-btn primary">
                     <span>Sign In</span>
                     <i class="fas fa-arrow-right"></i>
-                </button>
-
-                <div class="divider">
-                    <span>or continue with</span>
-                </div>
-
-                <button type="button" class="google-btn" id="googleLogin" onclick="handleGuestLogin()">
-                    <i class="fas fa-user-secret"></i>
-                    <span>Continue as Guest</span>
                 </button>
             </form>
 
@@ -72,6 +55,147 @@
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
+    <script>
+    function togglePwd(btn) {
+        var input = btn.parentElement.querySelector('input');
+        var icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    function showToast(msg, type) {
+        var existing = document.querySelectorAll('.toast');
+        existing.forEach(function(t) { t.remove(); });
+        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle' };
+        var toast = document.createElement('div');
+        toast.className = 'toast ' + (type || 'info');
+        toast.innerHTML = '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i><span>' + msg + '</span>';
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.remove(); }, 4000);
+    }
+
+    function getUsers() {
+        try { return JSON.parse(localStorage.getItem('mazval_users') || '[]'); }
+        catch { return []; }
+    }
+
+    function simpleHash(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            var char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return 'h_' + Math.abs(hash).toString(36) + '_' + str.length;
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        var email = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            showToast('Please fill in all fields', 'error');
+            return false;
+        }
+
+        // Admin login check
+        if (email === 'admin@mazzvall.com' && password === 'Admin@Secure123!') {
+            var session = {
+                id: 'sess_' + Date.now(),
+                userId: 'admin_001',
+                email: email,
+                role: 'admin',
+                status: 'approved',
+                plan: 'premium',
+                createdAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            };
+            localStorage.setItem('mazval_currentUser', JSON.stringify(session));
+            showToast('Welcome back, Admin!', 'success');
+            setTimeout(function() { window.location.href = 'admin.html'; }, 800);
+            return false;
+        }
+
+        // Regular user login
+        var users = getUsers();
+        var user = null;
+        for (var i = 0; i < users.length; i++) {
+            if (users[i].email.toLowerCase() === email.toLowerCase()) {
+                user = users[i];
+                break;
+            }
+        }
+
+        if (!user) {
+            showToast('Email or password is incorrect', 'error');
+            return false;
+        }
+
+        if (user.password !== simpleHash(password)) {
+            showToast('Email or password is incorrect', 'error');
+            return false;
+        }
+
+        if (user.status === 'pending') {
+            showToast('Your account is pending admin approval', 'warning');
+            setTimeout(function() { window.location.href = 'waiting-approval.html'; }, 1000);
+            return false;
+        }
+
+        if (user.status === 'rejected') {
+            showToast('Your account has been rejected', 'error');
+            return false;
+        }
+
+        if (user.status === 'suspended') {
+            showToast('Your account has been suspended', 'error');
+            return false;
+        }
+
+        // Approved user - create session
+        var session = {
+            id: 'sess_' + Date.now(),
+            userId: user.id,
+            email: user.email,
+            role: user.role || 'user',
+            status: user.status,
+            plan: user.plan || 'free',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        };
+        localStorage.setItem('mazval_currentUser', JSON.stringify(session));
+
+        // Update last login
+        user.lastLogin = new Date().toISOString();
+        localStorage.setItem('mazval_users', JSON.stringify(users));
+
+        showToast('Login successful!', 'success');
+        setTimeout(function() { window.location.href = 'index.html'; }, 800);
+        return false;
+    }
+
+    // Check if already logged in
+    (function() {
+        var raw = localStorage.getItem('mazval_currentUser');
+        if (raw) {
+            try {
+                var s = JSON.parse(raw);
+                if (new Date(s.expiresAt) > new Date()) {
+                    if (s.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else if (s.status === 'approved') {
+                        window.location.href = 'index.html';
+                    }
+                }
+            } catch(e) {}
+        }
+    })();
+    </script>
 </body>
 </html>

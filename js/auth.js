@@ -45,9 +45,14 @@ function getSession() {
             destroySession();
             return null;
         }
+        // Admin session is valid without checking users DB
+        if (session.userId === 'admin_001' && session.role === 'admin') {
+            return session;
+        }
         const users = getUsers();
         const user = users.find(u => u.id === session.userId);
         if (!user) { destroySession(); return null; }
+        // Update session with latest user status
         if (user.status === 'rejected' || user.status === 'suspended') {
             destroySession();
             return null;
