@@ -1,71 +1,14 @@
 {
-  "version": 2,
   "builds": [
     {
       "src": "server.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "css/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "js/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "img/**",
-      "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/login",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/register",
-      "dest": "/register.html"
-    },
-    {
-      "src": "/admin-login",
-      "dest": "/admin-login.html"
-    },
-    {
-      "src": "/admin",
-      "dest": "/admin.html"
-    },
-    {
-      "src": "/pricing",
-      "dest": "/pricing.html"
-    },
-    {
-      "src": "/payment",
-      "dest": "/payment.html"
-    },
-    {
-      "src": "/waiting-approval",
-      "dest": "/waiting-approval.html"
-    },
-    {
-      "src": "/account-status",
-      "dest": "/account-status.html"
-    },
-    {
-      "src": "/(.*\\.(html|css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
-      "dest": "/$1"
+      "source": "/api/:path*",
+      "destination": "/server.js"
     }
   ]
 }
