@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <style>body{opacity:0}</style>
+    <script>document.write('<style>body{display:none!important}</style>')</script>
     <script>
     (function() {
         var raw = localStorage.getItem('mazval_user');
@@ -46,7 +46,6 @@
             document.getElementById('userEmail').textContent = u.email;
             document.getElementById('statusText').textContent = u.status.toUpperCase();
             document.getElementById('statusText').className = 'status-value ' + u.status;
-            document.body.style.opacity = '1';
         } catch(e) { window.location.replace('login.html'); }
     })();
     </script>

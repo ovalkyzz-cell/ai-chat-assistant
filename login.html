@@ -70,9 +70,9 @@
         if (s) {
             try {
                 var u = JSON.parse(s);
-                if (u.role === 'admin') { window.location.href = 'admin.html'; return; }
-                if (u.status === 'approved') { window.location.href = 'index.html'; return; }
-                if (u.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+                if (u.role === 'admin') { window.location.replace('admin.html'); return; }
+                if (u.status === 'approved') { window.location.replace('index.html'); return; }
+                if (u.status === 'pending') { window.location.replace('waiting-approval.html'); return; }
             } catch(e) {}
         }
     })();
