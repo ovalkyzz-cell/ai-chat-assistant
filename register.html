@@ -106,6 +106,7 @@
         try {
             var data = await API.register(name, email, pass);
             if (data.success) {
+                localStorage.setItem('mazval_user', JSON.stringify({ name: name, email: email, status: 'pending', role: 'user', plan: 'free' }));
                 showToast('Registration successful! Waiting for admin approval.', 'success');
                 setTimeout(function(){ window.location.href = 'waiting-approval.html'; }, 1000);
             }

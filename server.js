@@ -5,14 +5,10 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
-
-// Static files
 app.use(express.static(path.join(__dirname)));
 
-// CORS
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
@@ -21,934 +17,456 @@ app.use((req, res, next) => {
     next();
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
-});
-
 // ========================================
-// DATABASE (In-memory for serverless)
+// DATABASE
 // ========================================
 const inMemoryDB = {};
-
-function readDB(name) {
-    if (inMemoryDB[name]) return inMemoryDB[name];
-    inMemoryDB[name] = [];
-    return inMemoryDB[name];
-}
-
-function writeDB(name, data) {
-    inMemoryDB[name] = data;
-}
-
-function generateId() {
-    return crypto.randomBytes(16).toString('hex');
-}
-
-function hashPassword(password) {
-    return crypto.createHash('sha256').update(password).digest('hex');
-}
+function readDB(n) { if (!inMemoryDB[n]) inMemoryDB[n] = []; return inMemoryDB[n]; }
+function writeDB(n, d) { inMemoryDB[n] = d; }
+function genId() { return crypto.randomBytes(16).toString('hex'); }
+function hashPw(p) { return crypto.createHash('sha256').update(p).digest('hex'); }
 
 // ========================================
 // AUTH MIDDLEWARE
 // ========================================
-function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token provided' } });
-    }
-    
-    const token = authHeader.split(' ')[1];
+function auth(req, res, next) {
+    const h = req.headers.authorization;
+    if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token' } });
+    const token = h.split(' ')[1];
     const sessions = readDB('sessions');
-    const session = sessions.find(s => s.token === token && !s.revoked);
-    
-    if (!session) {
-        return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' } });
-    }
-    
+    const s = sessions.find(x => x.token === token && !x.revoked);
+    if (!s) return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } });
     const users = readDB('users');
-    const user = users.find(u => u.id === session.userId);
-    
-    if (!user) {
-        return res.status(401).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
-    }
-    
-    if (user.status !== 'approved') {
-        return res.status(403).json({ success: false, error: { code: 'ACCOUNT_NOT_APPROVED', message: 'Account not approved' } });
-    }
-    
-    req.user = user;
-    req.session = session;
+    const u = users.find(x => x.id === s.userId);
+    if (!u) return res.status(401).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
+    req.user = u;
+    req.session = s;
     next();
 }
 
-function adminMiddleware(req, res, next) {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    }
+function adminAuth(req, res, next) {
+    if (req.user.role !== 'admin') return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Admin only' } });
     next();
 }
 
 // ========================================
 // AUTH ROUTES
 // ========================================
-
-// Register
 app.post('/api/auth/register', (req, res) => {
     const { name, email, password } = req.body;
-    
-    if (!name || !email || !password) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Name, email, and password are required' } });
-    }
-    
+    if (!name || !email || !password) return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Name, email, password required' } });
     const users = readDB('users');
-    
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-        return res.status(400).json({ success: false, error: { code: 'EMAIL_EXISTS', message: 'Email already registered' } });
-    }
-    
-    const newUser = {
-        id: generateId(),
-        name,
-        email: email.toLowerCase(),
-        password: hashPassword(password),
-        role: 'user',
-        status: 'pending',
-        plan: 'free',
-        dailyLimit: 5,
-        createdAt: new Date().toISOString()
-    };
-    
-    users.push(newUser);
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return res.status(400).json({ success: false, error: { code: 'EMAIL_EXISTS', message: 'Email already registered' } });
+    const u = { id: genId(), name, email: email.toLowerCase(), password: hashPw(password), role: 'user', status: 'pending', plan: 'free', dailyLimit: 5, createdAt: new Date().toISOString() };
+    users.push(u);
     writeDB('users', users);
-    
-    res.json({
-        success: true,
-        data: {
-            id: newUser.id,
-            name: newUser.name,
-            email: newUser.email,
-            status: newUser.status,
-            message: 'Registration successful. Waiting for admin approval.'
-        }
-    });
+    res.json({ success: true, data: { id: u.id, name: u.name, email: u.email, status: u.status, message: 'Registration successful. Waiting for admin approval.' } });
 });
 
-// Login
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    
-    if (!email || !password) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Email and password are required' } });
-    }
-    
+    if (!email || !password) return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Email and password required' } });
     const users = readDB('users');
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    // Admin hardcoded login
+
     if (email === 'admin@mazzvall.com' && password === 'Admin@Secure123!') {
-        let adminUser = users.find(u => u.email === 'admin@mazzvall.com');
-        if (!adminUser) {
-            adminUser = {
-                id: 'admin_001',
-                name: 'Admin',
-                email: 'admin@mazzvall.com',
-                password: hashPassword(password),
-                role: 'admin',
-                status: 'approved',
-                plan: 'premium',
-                dailyLimit: -1,
-                createdAt: new Date().toISOString()
-            };
-            users.push(adminUser);
+        let admin = users.find(u => u.email === 'admin@mazzvall.com');
+        if (!admin) {
+            admin = { id: 'admin_001', name: 'Admin', email: 'admin@mazzvall.com', password: hashPw(password), role: 'admin', status: 'approved', plan: 'premium', dailyLimit: -1, createdAt: new Date().toISOString() };
+            users.push(admin);
             writeDB('users', users);
         }
-        
-        const token = generateId();
+        const token = genId();
         const sessions = readDB('sessions');
-        sessions.push({ token, userId: adminUser.id, createdAt: new Date().toISOString() });
+        sessions.push({ token, userId: admin.id, createdAt: new Date().toISOString() });
         writeDB('sessions', sessions);
-        
-        return res.json({
-            success: true,
-            data: {
-                token,
-                user: { id: adminUser.id, name: adminUser.name, email: adminUser.email, role: adminUser.role, status: adminUser.status, plan: adminUser.plan }
-            }
-        });
+        return res.json({ success: true, data: { token, user: { id: admin.id, name: admin.name, email: admin.email, role: admin.role, status: admin.status, plan: admin.plan } } });
     }
-    
-    if (!user || user.password !== hashPassword(password)) {
-        return res.status(401).json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } });
-    }
-    
-    if (user.status !== 'approved') {
-        return res.status(403).json({ success: false, error: { code: 'ACCOUNT_NOT_APPROVED', message: 'Account pending approval or rejected' } });
-    }
-    
-    const token = generateId();
+
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!user || user.password !== hashPw(password)) return res.status(401).json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } });
+
+    const token = genId();
     const sessions = readDB('sessions');
     sessions.push({ token, userId: user.id, createdAt: new Date().toISOString() });
     writeDB('sessions', sessions);
-    
-    res.json({
-        success: true,
-        data: {
-            token,
-            user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status, plan: user.plan }
-        }
-    });
+    res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status, plan: user.plan } } });
 });
 
-// Logout
-app.post('/api/auth/logout', authMiddleware, (req, res) => {
+app.post('/api/auth/logout', auth, (req, res) => {
     const sessions = readDB('sessions');
-    const sessionIndex = sessions.findIndex(s => s.token === req.session.token);
-    if (sessionIndex !== -1) {
-        sessions[sessionIndex].revoked = true;
-        writeDB('sessions', sessions);
-    }
-    res.json({ success: true, data: { message: 'Logged out successfully' } });
+    const idx = sessions.findIndex(s => s.token === req.session.token);
+    if (idx !== -1) { sessions[idx].revoked = true; writeDB('sessions', sessions); }
+    res.json({ success: true, data: { message: 'Logged out' } });
 });
 
-// Get current user
-app.get('/api/auth/me', authMiddleware, (req, res) => {
-    res.json({
-        success: true,
-        data: {
-            id: req.user.id,
-            name: req.user.name,
-            email: req.user.email,
-            role: req.user.role,
-            status: req.user.status,
-            plan: req.user.plan,
-            dailyLimit: req.user.dailyLimit,
-            createdAt: req.user.createdAt
-        }
-    });
+app.get('/api/auth/me', auth, (req, res) => {
+    const u = req.user;
+    res.json({ success: true, data: { id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, plan: u.plan, dailyLimit: u.dailyLimit, createdAt: u.createdAt } });
 });
 
 // ========================================
 // CONVERSATION ROUTES
 // ========================================
-
-// Get all conversations
-app.get('/api/conversations', authMiddleware, (req, res) => {
-    const conversations = readDB('conversations');
-    const userConversations = conversations
-        .filter(c => c.userId === req.user.id)
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-        .map(c => ({ id: c.id, title: c.title, model: c.model, createdAt: c.createdAt, updatedAt: c.updatedAt }));
-    
-    res.json({ success: true, data: userConversations });
+app.get('/api/conversations', auth, (req, res) => {
+    const q = (req.query.q || '').toLowerCase();
+    let list = readDB('conversations').filter(c => c.userId === req.user.id);
+    if (q) list = list.filter(c => (c.title || '').toLowerCase().includes(q));
+    list.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    res.json({ success: true, data: list.map(c => ({ id: c.id, title: c.title, model: c.model, createdAt: c.createdAt, updatedAt: c.updatedAt })) });
 });
 
-// Create new conversation
-app.post('/api/conversations', authMiddleware, (req, res) => {
+app.post('/api/conversations', auth, (req, res) => {
     const { title, model } = req.body;
-    
-    const conversations = readDB('conversations');
-    const newConversation = {
-        id: generateId(),
-        userId: req.user.id,
-        title: title || 'New Chat',
-        model: model || 'chatgpt',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    
-    conversations.push(newConversation);
-    writeDB('conversations', conversations);
-    
-    res.json({ success: true, data: newConversation });
+    const c = { id: genId(), userId: req.user.id, title: title || 'New Chat', model: model || 'chatgpt', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const convs = readDB('conversations');
+    convs.push(c);
+    writeDB('conversations', convs);
+    res.json({ success: true, data: c });
 });
 
-// Get single conversation with messages
-app.get('/api/conversations/:id', authMiddleware, (req, res) => {
-    const conversations = readDB('conversations');
-    const conversation = conversations.find(c => c.id === req.params.id && c.userId === req.user.id);
-    
-    if (!conversation) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } });
-    }
-    
-    const messages = readDB('messages');
-    const conversationMessages = messages
-        .filter(m => m.conversationId === conversation.id)
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    
-    res.json({ success: true, data: { ...conversation, messages: conversationMessages } });
+app.get('/api/conversations/:id', auth, (req, res) => {
+    const c = readDB('conversations').find(x => x.id === req.params.id && x.userId === req.user.id);
+    if (!c) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } });
+    const msgs = readDB('messages').filter(m => m.conversationId === c.id).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    res.json({ success: true, data: { ...c, messages: msgs } });
 });
 
-// Update conversation
-app.patch('/api/conversations/:id', authMiddleware, (req, res) => {
-    const { title } = req.body;
-    const conversations = readDB('conversations');
-    const index = conversations.findIndex(c => c.id === req.params.id && c.userId === req.user.id);
-    
-    if (index === -1) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } });
-    }
-    
-    if (title) conversations[index].title = title;
-    conversations[index].updatedAt = new Date().toISOString();
-    writeDB('conversations', conversations);
-    
-    res.json({ success: true, data: conversations[index] });
+app.patch('/api/conversations/:id', auth, (req, res) => {
+    const convs = readDB('conversations');
+    const idx = convs.findIndex(c => c.id === req.params.id && c.userId === req.user.id);
+    if (idx === -1) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
+    if (req.body.title) convs[idx].title = req.body.title;
+    convs[idx].updatedAt = new Date().toISOString();
+    writeDB('conversations', convs);
+    res.json({ success: true, data: convs[idx] });
 });
 
-// Delete conversation
-app.delete('/api/conversations/:id', authMiddleware, (req, res) => {
-    const conversations = readDB('conversations');
-    const index = conversations.findIndex(c => c.id === req.params.id && c.userId === req.user.id);
-    
-    if (index === -1) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Conversation not found' } });
-    }
-    
-    // Delete messages
-    const messages = readDB('messages');
-    const filteredMessages = messages.filter(m => m.conversationId !== req.params.id);
-    writeDB('messages', filteredMessages);
-    
-    // Delete conversation
-    conversations.splice(index, 1);
-    writeDB('conversations', conversations);
-    
-    res.json({ success: true, data: { message: 'Conversation deleted' } });
+app.delete('/api/conversations/:id', auth, (req, res) => {
+    const convs = readDB('conversations');
+    const idx = convs.findIndex(c => c.id === req.params.id && c.userId === req.user.id);
+    if (idx === -1) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
+    const msgs = readDB('messages');
+    writeDB('messages', msgs.filter(m => m.conversationId !== req.params.id));
+    convs.splice(idx, 1);
+    writeDB('conversations', convs);
+    res.json({ success: true, data: { message: 'Deleted' } });
 });
 
 // ========================================
-// CHAT ROUTES
+// CHAT
 // ========================================
-
-// Send message and get AI response
-app.post('/api/chat', authMiddleware, async (req, res) => {
+app.post('/api/chat', auth, async (req, res) => {
     const { conversation_id, message, model } = req.body;
-    
-    if (!message || !message.trim()) {
-        return res.status(400).json({ success: false, error: { code: 'EMPTY_MESSAGE', message: 'Message cannot be empty' } });
-    }
-    
-    // Check daily limit
+    if (!message || !message.trim()) return res.status(400).json({ success: false, error: { code: 'EMPTY', message: 'Message required' } });
+
     const today = new Date().toDateString();
     const usage = readDB('usage');
-    const userUsage = usage.find(u => u.userId === req.user.id && u.date === today);
-    const usedMessages = userUsage ? userUsage.count : 0;
-    
-    if (req.user.dailyLimit !== -1 && usedMessages >= req.user.dailyLimit) {
-        return res.status(429).json({ success: false, error: { code: 'DAILY_LIMIT', message: 'Daily message limit reached' } });
+    const uUsage = usage.find(u => u.userId === req.user.id && u.date === today);
+    const used = uUsage ? uUsage.count : 0;
+    if (req.user.dailyLimit !== -1 && used >= req.user.dailyLimit) return res.status(429).json({ success: false, error: { code: 'LIMIT', message: 'Daily limit reached' } });
+
+    let convs = readDB('conversations');
+    let conv = convs.find(c => c.id === conversation_id && c.userId === req.user.id);
+    if (!conv) {
+        conv = { id: genId(), userId: req.user.id, title: message.substring(0, 50) + (message.length > 50 ? '...' : ''), model: model || 'chatgpt', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        convs.push(conv);
+        writeDB('conversations', convs);
     }
-    
-    // Get or create conversation
-    let conversations = readDB('conversations');
-    let conversation = conversations.find(c => c.id === conversation_id && c.userId === req.user.id);
-    
-    if (!conversation) {
-        conversation = {
-            id: generateId(),
-            userId: req.user.id,
-            title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-            model: model || 'chatgpt',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        conversations.push(conversation);
-        writeDB('conversations', conversations);
+
+    const msgs = readDB('messages');
+    msgs.push({ id: genId(), conversationId: conv.id, role: 'user', content: message, createdAt: new Date().toISOString() });
+    writeDB('messages', msgs);
+
+    const selectedModel = model || conv.model || 'chatgpt';
+
+    if (selectedModel === 'image') {
+        try {
+            const r = await fetch(`https://www.keyrafara.com/ai/image?prompt=${encodeURIComponent(message)}&model=flux`);
+            const d = await r.json();
+            const imgResp = d.url || d.image || d.data?.url || d.data?.image || '';
+            const assistantMsg = { id: genId(), conversationId: conv.id, role: 'assistant', content: imgResp ? `![Generated Image](${imgResp})` : 'Image generation completed.', model: 'image', createdAt: new Date().toISOString() };
+            msgs.push(assistantMsg);
+            writeDB('messages', msgs);
+            const ci = convs.findIndex(c => c.id === conv.id);
+            if (ci !== -1) { convs[ci].updatedAt = new Date().toISOString(); writeDB('conversations', convs); }
+            const ui = usage.findIndex(u => u.userId === req.user.id && u.date === today);
+            if (ui !== -1) usage[ui].count++; else usage.push({ userId: req.user.id, date: today, count: 1 });
+            writeDB('usage', usage);
+            return res.json({ success: true, data: { message: assistantMsg, conversation: { id: conv.id, title: conv.title } } });
+        } catch (e) {
+            return res.status(500).json({ success: false, error: { code: 'AI_ERROR', message: 'Image generation failed' } });
+        }
     }
-    
-    // Save user message
-    const messages = readDB('messages');
-    const userMessage = {
-        id: generateId(),
-        conversationId: conversation.id,
-        role: 'user',
-        content: message,
-        createdAt: new Date().toISOString()
-    };
-    messages.push(userMessage);
-    writeDB('messages', messages);
-    
-    // Get conversation history for context
-    const conversationMessages = messages
-        .filter(m => m.conversationId === conversation.id)
-        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-        .slice(-20)
-        .map(m => ({ role: m.role, content: m.content }));
-    
-    // Call AI API
+
+    const ENDPOINTS = { chatgpt: 'https://www.keyrafara.com/ai/chatgpt', gemini: 'https://www.keyrafara.com/ai/gemini', copilot: 'https://www.keyrafara.com/ai/copilot', apertus: 'https://www.keyrafara.com/ai/apertus', 'claude-opus': 'https://www.keyrafara.com/ai/claude-opus', mistral: 'https://www.keyrafara.com/ai/mistral', felo: 'https://www.keyrafara.com/ai/felo', turboseek: 'https://www.keyrafara.com/ai/turboseek' };
+    const ep = ENDPOINTS[selectedModel];
+    if (!ep) return res.status(400).json({ success: false, error: { code: 'INVALID_MODEL', message: 'Invalid model' } });
+
     try {
-        const selectedModel = model || conversation.model || 'chatgpt';
-        let aiResponse = '';
-        
-        // AI API endpoints
-        const AI_ENDPOINTS = {
-            chatgpt: 'https://www.keyrafara.com/ai/chatgpt',
-            gemini: 'https://www.keyrafara.com/ai/gemini',
-            copilot: 'https://www.keyrafara.com/ai/copilot',
-            apertus: 'https://www.keyrafara.com/ai/apertus',
-            'claude-opus': 'https://www.keyrafara.com/ai/claude-opus',
-            mistral: 'https://www.keyrafara.com/ai/mistral',
-            felo: 'https://www.keyrafara.com/ai/felo',
-            turboseek: 'https://www.keyrafara.com/ai/turboseek'
-        };
-        
-        const endpoint = AI_ENDPOINTS[selectedModel];
-        if (!endpoint) {
-            return res.status(400).json({ success: false, error: { code: 'INVALID_MODEL', message: 'Invalid AI model selected' } });
-        }
-        
-        let url;
-        if (selectedModel === 'chatgpt') {
-            url = `${endpoint}?query=${encodeURIComponent(message)}&model=auto`;
-        } else {
-            url = `${endpoint}?text=${encodeURIComponent(message)}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`AI API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        // Extract response text
-        if (data.response && typeof data.response === 'string') {
-            aiResponse = data.response;
-        } else if (data.answer && typeof data.answer === 'string') {
-            aiResponse = data.answer;
-        } else if (data.text && typeof data.text === 'string') {
-            aiResponse = data.text;
-        } else if (data.message && typeof data.message === 'string') {
-            aiResponse = data.message;
-        } else if (data.content && typeof data.content === 'string') {
-            aiResponse = data.content;
-        } else if (data.result && typeof data.result === 'string') {
-            aiResponse = data.result;
-        } else if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
-            aiResponse = data.choices[0].message?.content || data.choices[0].text || '';
-        } else if (typeof data === 'string') {
-            aiResponse = data;
-        } else {
-            aiResponse = 'I received your message. How can I help you further?';
-        }
-        
-        aiResponse = aiResponse.trim();
-        if (!aiResponse || aiResponse.startsWith('{') || aiResponse.startsWith('[')) {
-            aiResponse = 'I received your message. How can I help you further?';
-        }
-        
-        // Save AI message
-        const assistantMessage = {
-            id: generateId(),
-            conversationId: conversation.id,
-            role: 'assistant',
-            content: aiResponse,
-            model: selectedModel,
-            createdAt: new Date().toISOString()
-        };
-        messages.push(assistantMessage);
-        writeDB('messages', messages);
-        
-        // Update conversation
-        const convIndex = conversations.findIndex(c => c.id === conversation.id);
-        if (convIndex !== -1) {
-            conversations[convIndex].updatedAt = new Date().toISOString();
-            writeDB('conversations', conversations);
-        }
-        
-        // Update usage
-        const usageIndex = usage.findIndex(u => u.userId === req.user.id && u.date === today);
-        if (usageIndex !== -1) {
-            usage[usageIndex].count++;
-        } else {
-            usage.push({ userId: req.user.id, date: today, count: 1 });
-        }
+        const url = selectedModel === 'chatgpt' ? `${ep}?query=${encodeURIComponent(message)}&model=auto` : `${ep}?text=${encodeURIComponent(message)}`;
+        const r = await fetch(url);
+        const d = await r.json();
+        let aiResp = '';
+        if (typeof d.response === 'string') aiResp = d.response;
+        else if (typeof d.answer === 'string') aiResp = d.answer;
+        else if (typeof d.text === 'string') aiResp = d.text;
+        else if (typeof d.message === 'string') aiResp = d.message;
+        else if (typeof d.content === 'string') aiResp = d.content;
+        else if (typeof d.result === 'string') aiResp = d.result;
+        else if (d.choices && d.choices.length > 0) aiResp = d.choices[0].message?.content || d.choices[0].text || '';
+        else if (typeof d === 'string') aiResp = d;
+        else aiResp = 'I received your message. How can I help?';
+        aiResp = aiResp.trim();
+        if (!aiResp || aiResp.startsWith('{') || aiResp.startsWith('[')) aiResp = 'I received your message. How can I help?';
+
+        const assistantMsg = { id: genId(), conversationId: conv.id, role: 'assistant', content: aiResp, model: selectedModel, createdAt: new Date().toISOString() };
+        msgs.push(assistantMsg);
+        writeDB('messages', msgs);
+        const ci = convs.findIndex(c => c.id === conv.id);
+        if (ci !== -1) { convs[ci].updatedAt = new Date().toISOString(); writeDB('conversations', convs); }
+        const ui = usage.findIndex(u => u.userId === req.user.id && u.date === today);
+        if (ui !== -1) usage[ui].count++; else usage.push({ userId: req.user.id, date: today, count: 1 });
         writeDB('usage', usage);
-        
-        res.json({
-            success: true,
-            data: {
-                message: assistantMessage,
-                conversation: { id: conversation.id, title: conversation.title }
-            }
-        });
-        
-    } catch (error) {
-        console.error('AI API Error:', error);
+        res.json({ success: true, data: { message: assistantMsg, conversation: { id: conv.id, title: conv.title } } });
+    } catch (e) {
+        console.error('AI Error:', e);
         res.status(500).json({ success: false, error: { code: 'AI_ERROR', message: 'Failed to get AI response' } });
     }
 });
 
 // ========================================
-// TOOLS ROUTES
+// TOOLS
 // ========================================
-
-// Cek Nomor
-app.get('/api/tools/cek-nomor', authMiddleware, async (req, res) => {
-    const { nomor } = req.query;
-    if (!nomor) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'Phone number is required' } });
-    }
-    
-    try {
-        const response = await fetch(`https://www.keyrafara.com/tools/cek-nomor?nomor=${encodeURIComponent(nomor)}`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed to check number' } });
-    }
+app.get('/api/tools/cek-nomor', auth, async (req, res) => {
+    try { const r = await fetch(`https://www.keyrafara.com/tools/cek-nomor?nomor=${encodeURIComponent(req.query.nomor)}`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed' } }); }
 });
 
-// OTP Generator
-app.get('/api/tools/otp', authMiddleware, async (req, res) => {
-    const { type, limit, country } = req.query;
-    
-    try {
-        const response = await fetch(`https://www.keyrafara.com/tools/otp?type=${type || 'otps'}&limit=${limit || '20'}&country=${country || 'indonesia'}`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed to generate OTP' } });
-    }
+app.get('/api/tools/otp', auth, async (req, res) => {
+    try { const r = await fetch(`https://www.keyrafara.com/tools/otp?type=${req.query.type || 'otps'}&limit=${req.query.limit || '20'}&country=${req.query.country || 'indonesia'}`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed' } }); }
 });
 
-// Screenshot Website
-app.get('/api/tools/ssweb', authMiddleware, async (req, res) => {
-    const { url } = req.query;
-    if (!url) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'URL is required' } });
-    }
-    
-    try {
-        const response = await fetch(`https://www.keyrafara.com/tools/ssweb?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed to take screenshot' } });
-    }
+app.get('/api/tools/ssweb', auth, async (req, res) => {
+    try { const r = await fetch(`https://www.keyrafara.com/tools/ssweb?url=${encodeURIComponent(req.query.url)}`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed' } }); }
 });
 
-// Translate
-app.get('/api/tools/translate', authMiddleware, async (req, res) => {
-    const { text, to, from } = req.query;
-    if (!text) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'Text is required' } });
-    }
-    
+app.get('/api/tools/translate', auth, async (req, res) => {
+    try { const r = await fetch(`https://www.keyrafara.com/tools/translate?text=${encodeURIComponent(req.query.text)}&to=${req.query.to || 'en'}&from=${req.query.from || 'auto'}`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed' } }); }
+});
+
+// ========================================
+// DOWNLOADERS
+// ========================================
+app.get('/api/downloaders/:platform', auth, async (req, res) => {
+    const EP = { instagram: 'https://www.keyrafara.com/downloaders/instagram', facebook: 'https://www.keyrafara.com/downloaders/facebook', tiktok: 'https://www.keyrafara.com/downloaders/tiktok', twitter: 'https://www.keyrafara.com/downloaders/twitter', youtube: 'https://www.keyrafara.com/downloaders/youtube', 'youtube-mp3': 'https://www.keyrafara.com/downloaders/youtube-mp3', spotify: 'https://www.keyrafara.com/downloaders/spotify', safefileku: 'https://www.keyrafara.com/downloaders/safefileku' };
+    const ep = EP[req.params.platform];
+    if (!ep) return res.status(400).json({ success: false, error: { code: 'INVALID_PLATFORM', message: 'Invalid platform' } });
+    try { const r = await fetch(`${ep}?url=${encodeURIComponent(req.query.url)}`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'DOWNLOAD_ERROR', message: 'Failed' } }); }
+});
+
+// ========================================
+// IMAGE
+// ========================================
+app.get('/api/ai/image', auth, async (req, res) => {
+    try { const r = await fetch(`https://www.keyrafara.com/ai/image?prompt=${encodeURIComponent(req.query.prompt)}&model=flux`); const d = await r.json(); res.json({ success: true, data: d }); } catch (e) { res.status(500).json({ success: false, error: { code: 'IMAGE_ERROR', message: 'Failed' } }); }
+});
+
+// ========================================
+// SPEECH TO TEXT
+// ========================================
+app.post('/api/speech-to-text', auth, async (req, res) => {
+    const { audio } = req.body;
+    if (!audio) return res.status(400).json({ success: false, error: { code: 'MISSING_AUDIO', message: 'Audio data required' } });
     try {
-        const response = await fetch(`https://www.keyrafara.com/tools/translate?text=${encodeURIComponent(text)}&to=${to || 'en'}&from=${from || 'auto'}`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'TOOL_ERROR', message: 'Failed to translate' } });
+        const r = await fetch('https://www.keyrafara.com/ai/speech-to-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio, language: 'id' })
+        });
+        const d = await r.json();
+        res.json({ success: true, data: { text: d.text || d.transcript || d.result || '' } });
+    } catch (e) {
+        res.status(500).json({ success: false, error: { code: 'STT_ERROR', message: 'Speech recognition failed' } });
     }
 });
 
 // ========================================
-// DOWNLOADER ROUTES
+// FILE UPLOAD (Base64)
 // ========================================
-
-app.get('/api/downloaders/:platform', authMiddleware, async (req, res) => {
-    const { platform } = req.params;
-    const { url } = req.query;
-    
-    if (!url) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'URL is required' } });
-    }
-    
-    const DOWNLOADER_ENDPOINTS = {
-        instagram: 'https://www.keyrafara.com/downloaders/instagram',
-        facebook: 'https://www.keyrafara.com/downloaders/facebook',
-        tiktok: 'https://www.keyrafara.com/downloaders/tiktok',
-        twitter: 'https://www.keyrafara.com/downloaders/twitter',
-        youtube: 'https://www.keyrafara.com/downloaders/youtube',
-        'youtube-mp3': 'https://www.keyrafara.com/downloaders/youtube-mp3',
-        spotify: 'https://www.keyrafara.com/downloaders/spotify',
-        safefileku: 'https://www.keyrafara.com/downloaders/safefileku'
-    };
-    
-    const endpoint = DOWNLOADER_ENDPOINTS[platform];
-    if (!endpoint) {
-        return res.status(400).json({ success: false, error: { code: 'INVALID_PLATFORM', message: 'Invalid platform' } });
-    }
-    
-    try {
-        const response = await fetch(`${endpoint}?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'DOWNLOAD_ERROR', message: 'Failed to download' } });
-    }
+app.post('/api/files/upload', auth, (req, res) => {
+    const { file, name, type } = req.body;
+    if (!file || !name) return res.status(400).json({ success: false, error: { code: 'MISSING_FILE', message: 'File data required' } });
+    const allowed = ['image/', 'text/', 'application/pdf', 'application/zip'];
+    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi'];
+    const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
+    if (blocked.includes(ext)) return res.status(400).json({ success: false, error: { code: 'BLOCKED', message: 'File type not allowed' } });
+    const id = genId();
+    const files = readDB('files');
+    files.push({ id, userId: req.user.id, name, type: type || 'application/octet-stream', size: file.length, data: file, createdAt: new Date().toISOString() });
+    writeDB('files', files);
+    res.json({ success: true, data: { id, name, type, url: `data:${type};base64,${file}` } });
 });
 
 // ========================================
-// IMAGE GENERATION ROUTE
+// PLANS
 // ========================================
-
-app.get('/api/ai/image', authMiddleware, async (req, res) => {
-    const { prompt } = req.query;
-    if (!prompt) {
-        return res.status(400).json({ success: false, error: { code: 'MISSING_PARAMS', message: 'Prompt is required' } });
-    }
-    
-    try {
-        const response = await fetch(`https://www.keyrafara.com/ai/image?prompt=${encodeURIComponent(prompt)}&model=flux`);
-        const data = await response.json();
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: { code: 'IMAGE_ERROR', message: 'Failed to generate image' } });
-    }
-});
-
-// ========================================
-// PRICING ROUTES
-// ========================================
-
 app.get('/api/plans', (req, res) => {
-    const plans = [
+    res.json({ success: true, data: [
         { id: 'free', name: 'Free', price: 0, currency: 'IDR', dailyLimit: 5, features: ['chatgpt'], imageGen: false, tools: false, downloaders: false },
         { id: 'basic', name: 'Basic', price: 10000, currency: 'IDR', dailyLimit: 100, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: false, tools: true, downloaders: true },
         { id: 'pro', name: 'Pro', price: 20000, currency: 'IDR', dailyLimit: 500, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
         { id: 'premium', name: 'Premium', price: 35000, currency: 'IDR', dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
         { id: 'reseller', name: 'Reseller', price: 50000, currency: 'IDR', dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true, maxUsers: 10 }
-    ];
-    
-    res.json({ success: true, data: plans });
+    ]});
 });
 
 // ========================================
-// PAYMENT ROUTES
+// PAYMENT
 // ========================================
-
-app.post('/api/payment/create', authMiddleware, async (req, res) => {
+app.post('/api/payment/create', auth, async (req, res) => {
     const { plan, name, email, password, description, discountCode } = req.body;
-    
-    const PLAN_DETAILS = {
-        basic: { name: 'Basic', price: 10000, dailyLimit: 100, duration: null },
-        pro: { name: 'Pro', price: 20000, dailyLimit: 500, duration: 30 },
-        premium: { name: 'Premium', price: 35000, dailyLimit: -1, duration: 30 },
-        reseller: { name: 'Reseller', price: 50000, dailyLimit: -1, duration: 30, maxUsers: 10 }
-    };
-    
-    const planDetails = PLAN_DETAILS[plan];
-    if (!planDetails) {
-        return res.status(400).json({ success: false, error: { code: 'INVALID_PLAN', message: 'Invalid plan selected' } });
-    }
-    
-    let amount = planDetails.price;
-    
-    // Apply discount
+    const PLANS = { basic: { name: 'Basic', price: 10000 }, pro: { name: 'Pro', price: 20000 }, premium: { name: 'Premium', price: 35000 }, reseller: { name: 'Reseller', price: 50000 } };
+    const pd = PLANS[plan];
+    if (!pd) return res.status(400).json({ success: false, error: { code: 'INVALID_PLAN', message: 'Invalid plan' } });
+    let amount = pd.price;
     if (discountCode) {
         const codes = readDB('discountCodes');
-        const code = codes.find(c => c.code === discountCode.toUpperCase() && c.active);
-        if (code) {
-            if (code.type === 'percent') {
-                amount = Math.floor(amount * (1 - code.discount / 100));
-            } else {
-                amount = Math.max(0, amount - code.discount);
-            }
-        }
+        const c = codes.find(x => x.code === discountCode.toUpperCase() && x.active);
+        if (c) amount = c.type === 'percent' ? Math.floor(amount * (1 - c.discount / 100)) : Math.max(0, amount - c.discount);
     }
-    
-    // Create QRIS transaction
-    const QRIS_CONFIG = {
-        baseUrl: 'https://api.buatqris.site',
-        accountId: process.env.QRIS_ACCOUNT_ID || '',
-        secretToken: process.env.QRIS_SECRET_TOKEN || ''
-    };
-    
     try {
-        const response = await fetch(QRIS_CONFIG.baseUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'api_create_qris',
-                account_id: QRIS_CONFIG.accountId,
-                secret_token: QRIS_CONFIG.secretToken,
-                amount: amount.toString(),
-                description: description || `Payment for ${planDetails.name} Plan - AI Chat Assistant`,
-                qris_method: 'qris_two',
-                fee_by: 'user'
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.data) {
-            // Save transaction
-            const transactions = readDB('transactions');
-            transactions.push({
-                id: data.data.transaction_id,
-                userId: req.user.id,
-                plan,
-                name,
-                email,
-                password: password ? hashPassword(password) : null,
-                amount,
-                status: 'pending',
-                createdAt: new Date().toISOString()
-            });
-            writeDB('transactions', transactions);
-            
-            res.json({ success: true, data: data.data });
-        } else {
-            throw new Error(data.message || 'Failed to create transaction');
-        }
-    } catch (error) {
-        console.error('Payment Error:', error);
-        res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Failed to create payment' } });
-    }
+        const r = await fetch('https://api.buatqris.site', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ action: 'api_create_qris', account_id: process.env.QRIS_ACCOUNT_ID || '', secret_token: process.env.QRIS_SECRET_TOKEN || '', amount: amount.toString(), description: description || `Payment for ${pd.name}`, qris_method: 'qris_two', fee_by: 'user' }) });
+        const d = await r.json();
+        if (d.success && d.data) {
+            const txns = readDB('transactions');
+            txns.push({ id: d.data.transaction_id, userId: req.user.id, plan, name, email, password: password ? hashPw(password) : null, amount, status: 'pending', createdAt: new Date().toISOString() });
+            writeDB('transactions', txns);
+            res.json({ success: true, data: d.data });
+        } else throw new Error(d.message || 'Failed');
+    } catch (e) { res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Payment failed' } }); }
 });
 
-app.post('/api/payment/check', authMiddleware, async (req, res) => {
-    const { transaction_id } = req.body;
-    
-    const QRIS_CONFIG = {
-        baseUrl: 'https://api.buatqris.site',
-        accountId: process.env.QRIS_ACCOUNT_ID || '',
-        secretToken: process.env.QRIS_SECRET_TOKEN || ''
-    };
-    
+app.post('/api/payment/check', auth, async (req, res) => {
     try {
-        const response = await fetch(QRIS_CONFIG.baseUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                action: 'api_check_status',
-                account_id: QRIS_CONFIG.accountId,
-                secret_token: QRIS_CONFIG.secretToken,
-                transaction_id
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.data) {
-            // If payment successful, activate user
-            if (data.data.status === 'success') {
-                const transactions = readDB('transactions');
-                const transaction = transactions.find(t => t.id === transaction_id);
-                
-                if (transaction && transaction.status !== 'success') {
-                    transaction.status = 'success';
-                    writeDB('transactions', transactions);
-                    
-                    // Create or update user
+        const r = await fetch('https://api.buatqris.site', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ action: 'api_check_status', account_id: process.env.QRIS_ACCOUNT_ID || '', secret_token: process.env.QRIS_SECRET_TOKEN || '', transaction_id: req.body.transaction_id }) });
+        const d = await r.json();
+        if (d.success && d.data) {
+            if (d.data.status === 'success') {
+                const txns = readDB('transactions');
+                const tx = txns.find(t => t.id === req.body.transaction_id);
+                if (tx && tx.status !== 'success') {
+                    tx.status = 'success';
+                    writeDB('transactions', txns);
                     const users = readDB('users');
-                    let user = users.find(u => u.email === transaction.email);
-                    
-                    if (!user && transaction.password) {
-                        user = {
-                            id: generateId(),
-                            name: transaction.name,
-                            email: transaction.email,
-                            password: transaction.password,
-                            role: transaction.plan === 'reseller' ? 'reseller' : 'user',
-                            status: 'approved',
-                            plan: transaction.plan,
-                            dailyLimit: transaction.plan === 'premium' || transaction.plan === 'reseller' ? -1 : (transaction.plan === 'pro' ? 500 : 100),
-                            createdAt: new Date().toISOString()
-                        };
-                        users.push(user);
-                    } else if (user) {
-                        user.status = 'approved';
-                        user.plan = transaction.plan;
-                        user.dailyLimit = transaction.plan === 'premium' || transaction.plan === 'reseller' ? -1 : (transaction.plan === 'pro' ? 500 : 100);
-                    }
-                    
+                    let u = users.find(x => x.email === tx.email);
+                    if (!u && tx.password) {
+                        u = { id: genId(), name: tx.name, email: tx.email, password: tx.password, role: 'user', status: 'approved', plan: tx.plan, dailyLimit: tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100, createdAt: new Date().toISOString() };
+                        users.push(u);
+                    } else if (u) { u.status = 'approved'; u.plan = tx.plan; u.dailyLimit = tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100; }
                     writeDB('users', users);
                 }
             }
-            
-            res.json({ success: true, data: data.data });
-        } else {
-            throw new Error(data.message || 'Failed to check status');
-        }
-    } catch (error) {
-        console.error('Payment Check Error:', error);
-        res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Failed to check payment status' } });
-    }
+            res.json({ success: true, data: d.data });
+        } else throw new Error(d.message || 'Failed');
+    } catch (e) { res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Check failed' } }); }
 });
 
 // ========================================
-// DISCOUNT CODE ROUTES
+// DISCOUNTS
 // ========================================
-
-app.get('/api/discounts', (req, res) => {
-    const codes = readDB('discountCodes');
-    res.json({ success: true, data: codes });
-});
-
-app.post('/api/discounts/apply', authMiddleware, (req, res) => {
+app.post('/api/discounts/apply', auth, (req, res) => {
     const { code, plan } = req.body;
-    
-    if (!code || !code.startsWith('GOVAL-')) {
-        return res.status(400).json({ success: false, error: { code: 'INVALID_CODE', message: 'Code must start with GOVAL-' } });
-    }
-    
+    if (!code || !code.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID_CODE', message: 'Code must start with GOVAL-' } });
     const codes = readDB('discountCodes');
-    const discountCode = codes.find(c => c.code === code.toUpperCase() && c.active);
-    
-    if (!discountCode) {
-        return res.status(404).json({ success: false, error: { code: 'CODE_NOT_FOUND', message: 'Invalid or inactive discount code' } });
-    }
-    
-    const PLAN_PRICES = { basic: 10000, pro: 20000, premium: 35000, reseller: 50000 };
-    const planPrice = PLAN_PRICES[plan] || 0;
-    
-    let discountAmount = 0;
-    if (discountCode.type === 'percent') {
-        discountAmount = Math.floor(planPrice * (discountCode.discount / 100));
-    } else {
-        discountAmount = discountCode.discount;
-    }
-    
-    res.json({
-        success: true,
-        data: {
-            code: discountCode.code,
-            discount: discountAmount,
-            type: discountCode.type,
-            value: discountCode.discount
-        }
-    });
+    const c = codes.find(x => x.code === code.toUpperCase() && x.active);
+    if (!c) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Invalid code' } });
+    const PRICES = { basic: 10000, pro: 20000, premium: 35000, reseller: 50000 };
+    const p = PRICES[plan] || 0;
+    const amt = c.type === 'percent' ? Math.floor(p * (c.discount / 100)) : c.discount;
+    res.json({ success: true, data: { code: c.code, discount: amt, type: c.type, value: c.discount } });
 });
 
 // ========================================
-// ADMIN ROUTES
+// ADMIN
 // ========================================
-
-// Get all users
-app.get('/api/admin/users', authMiddleware, adminMiddleware, (req, res) => {
-    const users = readDB('users');
-    const sanitizedUsers = users.map(u => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        status: u.status,
-        plan: u.plan,
-        dailyLimit: u.dailyLimit,
-        createdAt: u.createdAt
-    }));
-    res.json({ success: true, data: sanitizedUsers });
+app.get('/api/admin/users', auth, adminAuth, (req, res) => {
+    res.json({ success: true, data: readDB('users').map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, plan: u.plan, dailyLimit: u.dailyLimit, createdAt: u.createdAt })) });
 });
 
-// Approve user
-app.post('/api/admin/users/:id/approve', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/admin/users/:id/approve', auth, adminAuth, (req, res) => {
     const users = readDB('users');
-    const user = users.find(u => u.id === req.params.id);
-    
-    if (!user) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
-    }
-    
-    user.status = 'approved';
-    user.approvedAt = new Date().toISOString();
+    const u = users.find(x => x.id === req.params.id);
+    if (!u) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    u.status = 'approved';
     writeDB('users', users);
-    
-    res.json({ success: true, data: { message: 'User approved' } });
+    res.json({ success: true, data: { message: 'Approved' } });
 });
 
-// Reject user
-app.post('/api/admin/users/:id/reject', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/admin/users/:id/reject', auth, adminAuth, (req, res) => {
     const users = readDB('users');
-    const user = users.find(u => u.id === req.params.id);
-    
-    if (!user) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
-    }
-    
-    user.status = 'rejected';
+    const u = users.find(x => x.id === req.params.id);
+    if (!u) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    u.status = 'rejected';
     writeDB('users', users);
-    
-    res.json({ success: true, data: { message: 'User rejected' } });
+    res.json({ success: true, data: { message: 'Rejected' } });
 });
 
-// Suspend user
-app.post('/api/admin/users/:id/suspend', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/admin/users/:id/suspend', auth, adminAuth, (req, res) => {
     const users = readDB('users');
-    const user = users.find(u => u.id === req.params.id);
-    
-    if (!user) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
-    }
-    
-    user.status = 'suspended';
+    const u = users.find(x => x.id === req.params.id);
+    if (!u) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    u.status = 'suspended';
     writeDB('users', users);
-    
-    res.json({ success: true, data: { message: 'User suspended' } });
+    res.json({ success: true, data: { message: 'Suspended' } });
 });
 
-// Get discount codes
-app.get('/api/admin/discounts', authMiddleware, adminMiddleware, (req, res) => {
-    const codes = readDB('discountCodes');
-    res.json({ success: true, data: codes });
+app.get('/api/admin/discounts', auth, adminAuth, (req, res) => {
+    res.json({ success: true, data: readDB('discountCodes') });
 });
 
-// Create discount code
-app.post('/api/admin/discounts', authMiddleware, adminMiddleware, (req, res) => {
+app.post('/api/admin/discounts', auth, adminAuth, (req, res) => {
     const { code, discount, type } = req.body;
-    
-    if (!code || !code.startsWith('GOVAL-')) {
-        return res.status(400).json({ success: false, error: { code: 'INVALID_CODE', message: 'Code must start with GOVAL-' } });
-    }
-    
+    if (!code || !code.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID', message: 'Code must start with GOVAL-' } });
     const codes = readDB('discountCodes');
-    if (codes.find(c => c.code === code.toUpperCase())) {
-        return res.status(400).json({ success: false, error: { code: 'CODE_EXISTS', message: 'Code already exists' } });
-    }
-    
-    codes.push({
-        code: code.toUpperCase(),
-        discount: parseInt(discount),
-        type: type || 'percent',
-        active: true,
-        createdAt: new Date().toISOString()
-    });
+    if (codes.find(c => c.code === code.toUpperCase())) return res.status(400).json({ success: false, error: { code: 'EXISTS', message: 'Code exists' } });
+    codes.push({ code: code.toUpperCase(), discount: parseInt(discount), type: type || 'percent', active: true, createdAt: new Date().toISOString() });
     writeDB('discountCodes', codes);
-    
-    res.json({ success: true, data: { message: 'Discount code created' } });
+    res.json({ success: true, data: { message: 'Created' } });
 });
 
-// Delete discount code
-app.delete('/api/admin/discounts/:code', authMiddleware, adminMiddleware, (req, res) => {
+app.delete('/api/admin/discounts/:code', auth, adminAuth, (req, res) => {
     let codes = readDB('discountCodes');
     codes = codes.filter(c => c.code !== req.params.code.toUpperCase());
     writeDB('discountCodes', codes);
-    res.json({ success: true, data: { message: 'Discount code deleted' } });
+    res.json({ success: true, data: { message: 'Deleted' } });
 });
 
-// Toggle discount code
-app.patch('/api/admin/discounts/:code', authMiddleware, adminMiddleware, (req, res) => {
+app.patch('/api/admin/discounts/:code', auth, adminAuth, (req, res) => {
     const codes = readDB('discountCodes');
-    const code = codes.find(c => c.code === req.params.code.toUpperCase());
-    
-    if (!code) {
-        return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Code not found' } });
-    }
-    
-    code.active = !code.active;
+    const c = codes.find(x => x.code === req.params.code.toUpperCase());
+    if (!c) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
+    c.active = !c.active;
     writeDB('discountCodes', codes);
-    
-    res.json({ success: true, data: { message: `Code ${code.active ? 'activated' : 'deactivated'}` } });
+    res.json({ success: true, data: { message: c.active ? 'Activated' : 'Deactivated' } });
 });
 
 // ========================================
-// START SERVER
+// CATCH-ALL: serve index.html for SPA routes
 // ========================================
-// Global error handler
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
+    const htmlFile = path.join(__dirname, req.path.endsWith('.html') ? req.path : req.path + '.html');
+    if (fs.existsSync(htmlFile)) return res.sendFile(htmlFile);
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Error handler
 app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: err.message || 'Internal server error' } });
+    console.error(err);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL', message: 'Server error' } });
 });
 
 if (process.env.VERCEL !== '1') {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
 module.exports = app;

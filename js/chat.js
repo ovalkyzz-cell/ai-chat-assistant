@@ -1,973 +1,562 @@
 /* ========================================
    Chat Logic - Mazval GPT AI
-   Uses API Client for all requests
    ======================================== */
-
-// Chat State
-const ChatState = {
-    chats: [],
-    currentChatId: null,
-    currentModel: 'chatgpt',
-    isGenerating: false,
-    currentView: 'chats',
-    currentTool: null,
-    currentDownloader: null,
-    abortController: null
-};
-
-// Plan limits
-const PRICING_PLANS = {
-    free: { dailyLimit: 5, features: ['chatgpt'], imageGen: false, tools: false, downloaders: false },
-    basic: { dailyLimit: 100, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: false, tools: true, downloaders: true },
-    pro: { dailyLimit: 500, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
-    premium: { dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
-    reseller: { dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true }
-};
-
-// DOM Elements
-let elements = {};
+const ChatState = { chats: [], currentChatId: null, currentModel: 'chatgpt', isGenerating: false, currentView: 'chats', currentTool: null, currentDownloader: null, abortController: null };
+const PRICING_PLANS = { free: { dailyLimit: 5, features: ['chatgpt'], imageGen: false, tools: false, downloaders: false }, basic: { dailyLimit: 100, features: ['chatgpt','gemini','copilot','apertus','claude-opus','mistral','felo','turboseek'], imageGen: false, tools: true, downloaders: true }, pro: { dailyLimit: 500, features: ['chatgpt','gemini','copilot','apertus','claude-opus','mistral','felo','turboseek'], imageGen: true, tools: true, downloaders: true }, premium: { dailyLimit: -1, features: ['chatgpt','gemini','copilot','apertus','claude-opus','mistral','felo','turboseek'], imageGen: true, tools: true, downloaders: true }, reseller: { dailyLimit: -1, features: ['chatgpt','gemini','copilot','apertus','claude-opus','mistral','felo','turboseek'], imageGen: true, tools: true, downloaders: true } };
+let el = {};
 
 function cacheElements() {
-    elements = {
-        sidebar: document.getElementById('sidebar'),
-        sidebarOverlay: document.getElementById('sidebarOverlay'),
-        sidebarToggle: document.getElementById('sidebarToggle'),
-        newChatBtn: document.getElementById('newChatBtn'),
-        chatList: document.getElementById('chatList'),
-        chatContainer: document.getElementById('chatContainer'),
-        welcomeScreen: document.getElementById('welcomeScreen'),
-        messagesContainer: document.getElementById('messagesContainer'),
-        messageInput: document.getElementById('messageInput'),
-        sendBtn: document.getElementById('sendBtn'),
-        modelSelect: document.getElementById('modelSelect'),
-        userName: document.getElementById('userName'),
-        logoutBtn: document.getElementById('logoutBtn'),
-        userInfo: document.getElementById('userInfo'),
-        inputArea: document.getElementById('inputArea'),
-        chatsPanel: document.getElementById('chatsPanel'),
-        toolsPanel: document.getElementById('toolsPanel'),
-        downloadersPanel: document.getElementById('downloadersPanel'),
-        toolInterface: document.getElementById('toolInterface'),
-        toolTitle: document.getElementById('toolTitle'),
-        toolContent: document.getElementById('toolContent'),
-        toolResult: document.getElementById('toolResult'),
-        backToChat: document.getElementById('backToChat'),
-        toolModal: document.getElementById('toolModal'),
-        resultModal: document.getElementById('resultModal')
+    el = {
+        sidebar: document.getElementById('sidebar'), sidebarOverlay: document.getElementById('sidebarOverlay'),
+        sidebarToggle: document.getElementById('sidebarToggle'), newChatBtn: document.getElementById('newChatBtn'),
+        chatList: document.getElementById('chatList'), chatContainer: document.getElementById('chatContainer'),
+        welcomeScreen: document.getElementById('welcomeScreen'), messagesContainer: document.getElementById('messagesContainer'),
+        messageInput: document.getElementById('messageInput'), sendBtn: document.getElementById('sendBtn'),
+        modelSelect: document.getElementById('modelSelect'), userName: document.getElementById('userName'),
+        logoutBtn: document.getElementById('logoutBtn'), inputArea: document.getElementById('inputArea'),
+        chatsPanel: document.getElementById('chatsPanel'), toolsPanel: document.getElementById('toolsPanel'),
+        downloadersPanel: document.getElementById('downloadersPanel'), toolInterface: document.getElementById('toolInterface'),
+        toolTitle: document.getElementById('toolTitle'), toolContent: document.getElementById('toolContent'),
+        toolResult: document.getElementById('toolResult'), backToChat: document.getElementById('backToChat'),
+        modelSelector: document.getElementById('modelSelector'), modelCurrent: document.getElementById('modelCurrent'),
+        modelDropdown: document.getElementById('modelDropdown'),
+        historySearch: document.getElementById('historySearch'),
+        micBtn: document.getElementById('micBtn'), attachBtn: document.getElementById('attachBtn'),
+        fileInput: document.getElementById('fileInput'), attachmentPreview: document.getElementById('attachmentPreview'),
+        settingsPanel: document.getElementById('settingsPanel'), helpPanel: document.getElementById('helpPanel'),
+        profilePanel: document.getElementById('profilePanel'), adminLink: document.getElementById('adminLink'),
+        stopBtn: document.getElementById('stopBtn')
     };
 }
 
-// Get Current User
-function getCurrentUser() {
-    try {
-        return JSON.parse(localStorage.getItem('mazval_user'));
-    } catch {
-        return null;
-    }
-}
+function getUser() { try { return JSON.parse(localStorage.getItem('mazval_user')); } catch { return null; } }
+function getUserPlan() { const u = getUser(); if (!u) return 'free'; if (u.role === 'admin') return 'premium'; return u.plan || 'free'; }
+function getPlanLimits(p) { return PRICING_PLANS[p] || PRICING_PLANS.free; }
 
-// Get Current User's Plan
-function getCurrentUserPlan() {
-    const user = getCurrentUser();
-    if (!user) return 'free';
-    if (user.role === 'admin') return 'premium';
-    return user.plan || 'free';
-}
-
-// Get Plan Limits
-function getPlanLimits(plan) {
-    return PRICING_PLANS[plan] || PRICING_PLANS.free;
-}
-
-// Check Daily Limit
-function checkDailyLimit() {
-    const plan = getCurrentUserPlan();
-    const limits = getPlanLimits(plan);
-    if (limits.dailyLimit === -1) return true;
-    
-    const today = new Date().toDateString();
-    const usage = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
-    const todayCount = usage[today] || 0;
-    return todayCount < limits.dailyLimit;
-}
-
-// Increment Daily Usage
-function incrementDailyUsage() {
-    const today = new Date().toDateString();
-    const usage = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
-    usage[today] = (usage[today] || 0) + 1;
-    
-    Object.keys(usage).forEach(date => {
-        if (date !== today) delete usage[date];
-    });
-    
-    localStorage.setItem('dailyUsage', JSON.stringify(usage));
-}
-
-// Check Model Access
-function hasModelAccess(model) {
-    const plan = getCurrentUserPlan();
-    const limits = getPlanLimits(plan);
-    if (plan === 'free') return model === 'chatgpt';
-    return limits.features.includes(model);
-}
-
-// Check Feature Access
-function hasFeatureAccess(feature) {
-    const plan = getCurrentUserPlan();
-    const limits = getPlanLimits(plan);
-    switch (feature) {
-        case 'image': return limits.imageGen;
-        case 'tools': return limits.tools;
-        case 'downloaders': return limits.downloaders;
-        default: return false;
-    }
-}
-
-// Initialize
+// ========================================
+// INIT
+// ========================================
 function init() {
     cacheElements();
-    
-    // Check auth
-    const user = getCurrentUser();
-    if (!user) {
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    // Update UI
-    if (elements.userName) {
-        elements.userName.textContent = user.name || user.email.split('@')[0];
-    }
-    
+    const user = getUser();
+    if (!user) { window.location.href = 'login.html'; return; }
+    if (el.userName) el.userName.textContent = user.name || user.email.split('@')[0];
+    if (el.adminLink) el.adminLink.style.display = user.role === 'admin' ? '' : 'none';
     setupEventListeners();
     setupSidebarNav();
+    setupModelSelector();
     setupTools();
     setupDownloaders();
     loadConversations();
-    setupModelSelector();
+    setupVoice();
+    setupFileUpload();
 }
 
-// Setup Event Listeners
+// ========================================
+// EVENT LISTENERS
+// ========================================
 function setupEventListeners() {
-    if (elements.sidebarToggle) {
-        elements.sidebarToggle.addEventListener('click', toggleSidebar);
-    }
-    
-    if (elements.sidebarOverlay) {
-        elements.sidebarOverlay.addEventListener('click', closeSidebar);
-    }
-    
-    if (elements.newChatBtn) {
-        elements.newChatBtn.addEventListener('click', () => {
-            showChatView();
-            createNewChat();
-        });
-    }
-    
-    if (elements.messageInput) {
-        elements.messageInput.addEventListener('input', handleInputChange);
-        elements.messageInput.addEventListener('keydown', handleKeyDown);
-    }
-    
-    if (elements.sendBtn) {
-        elements.sendBtn.addEventListener('click', sendMessage);
-    }
-    
-    if (elements.backToChat) {
-        elements.backToChat.addEventListener('click', showChatView);
-    }
-    
-    if (elements.logoutBtn) {
-        elements.logoutBtn.addEventListener('click', handleLogout);
-    }
-    
-    // Suggestion cards
-    document.querySelectorAll('.suggestion-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const prompt = card.dataset.prompt;
-            if (elements.messageInput) {
-                elements.messageInput.value = prompt;
-                handleInputChange();
-                sendMessage();
-            }
+    if (el.sidebarToggle) el.sidebarToggle.addEventListener('click', toggleSidebar);
+    if (el.sidebarOverlay) el.sidebarOverlay.addEventListener('click', closeSidebar);
+    if (el.newChatBtn) el.newChatBtn.addEventListener('click', () => { showChatView(); createNewChat(); });
+    if (el.messageInput) { el.messageInput.addEventListener('input', handleInputChange); el.messageInput.addEventListener('keydown', handleKeyDown); }
+    if (el.sendBtn) el.sendBtn.addEventListener('click', sendMessage);
+    if (el.backToChat) el.backToChat.addEventListener('click', showChatView);
+    if (el.logoutBtn) el.logoutBtn.addEventListener('click', handleLogout);
+    if (el.historySearch) el.historySearch.addEventListener('input', (e) => loadConversations(e.target.value));
+    document.querySelectorAll('.suggestion-card').forEach(c => c.addEventListener('click', () => { if (el.messageInput) { el.messageInput.value = c.dataset.prompt; handleInputChange(); sendMessage(); } }));
+    document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeSidebar();
+            const page = link.dataset.page;
+            if (page === 'pricing') window.location.href = 'pricing.html';
+            else if (page === 'admin') window.location.href = 'admin.html';
+            else if (page === 'settings') showPanel('settings');
+            else if (page === 'help') showPanel('help');
         });
     });
 }
 
-// Setup Sidebar Navigation
+// ========================================
+// SIDEBAR NAV
+// ========================================
 function setupSidebarNav() {
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            const tabName = tab.dataset.tab;
-            
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            const t = tab.dataset.tab;
+            document.querySelectorAll('.nav-tab').forEach(x => x.classList.remove('active'));
             tab.classList.add('active');
-            
             hideAllPanels();
-            switch (tabName) {
-                case 'chats':
-                    elements.chatsPanel?.classList.remove('hidden');
-                    ChatState.currentView = 'chats';
-                    break;
-                case 'tools':
-                    elements.toolsPanel?.classList.remove('hidden');
-                    ChatState.currentView = 'tools';
-                    break;
-                case 'downloaders':
-                    elements.downloadersPanel?.classList.remove('hidden');
-                    ChatState.currentView = 'downloaders';
-                    break;
-            }
+            if (t === 'chats') { el.chatsPanel?.classList.remove('hidden'); ChatState.currentView = 'chats'; }
+            else if (t === 'tools') { el.toolsPanel?.classList.remove('hidden'); ChatState.currentView = 'tools'; }
+            else if (t === 'downloaders') { el.downloadersPanel?.classList.remove('hidden'); ChatState.currentView = 'downloaders'; }
+        });
+    });
+}
+function hideAllPanels() { el.chatsPanel?.classList.add('hidden'); el.toolsPanel?.classList.add('hidden'); el.downloadersPanel?.classList.add('hidden'); }
+function toggleSidebar() { el.sidebar?.classList.toggle('collapsed'); el.sidebarOverlay?.classList.toggle('active'); }
+function closeSidebar() { el.sidebar?.classList.remove('collapsed'); el.sidebarOverlay?.classList.remove('active'); }
+
+function showPanel(p) { showChatView(); }
+
+// ========================================
+// MODEL SELECTOR
+// ========================================
+function setupModelSelector() {
+    if (!el.modelCurrent || !el.modelDropdown) return;
+    el.modelCurrent.addEventListener('click', (e) => { e.stopPropagation(); el.modelDropdown.classList.toggle('active'); });
+    document.addEventListener('click', () => el.modelDropdown?.classList.remove('active'));
+    el.modelDropdown.addEventListener('click', (e) => e.stopPropagation());
+    document.querySelectorAll('.model-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            const m = opt.dataset.model;
+            ChatState.currentModel = m;
+            el.modelCurrent.querySelector('.model-name').textContent = opt.querySelector('.model-name').textContent;
+            el.modelDropdown.classList.remove('active');
+            document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
         });
     });
 }
 
-function hideAllPanels() {
-    elements.chatsPanel?.classList.add('hidden');
-    elements.toolsPanel?.classList.add('hidden');
-    elements.downloadersPanel?.classList.add('hidden');
-}
+// ========================================
+// TOOLS & DOWNLOADERS
+// ========================================
+function setupTools() { document.querySelectorAll('.tool-item[data-tool]').forEach(i => i.addEventListener('click', () => openTool(i.dataset.tool))); }
+function setupDownloaders() { document.querySelectorAll('.tool-item[data-downloader]').forEach(i => i.addEventListener('click', () => openDownloader(i.dataset.downloader))); }
 
-// Setup Tools
-function setupTools() {
-    document.querySelectorAll('.tool-item[data-tool]').forEach(item => {
-        item.addEventListener('click', () => openTool(item.dataset.tool));
-    });
-}
-
-// Setup Downloaders
-function setupDownloaders() {
-    document.querySelectorAll('.tool-item[data-downloader]').forEach(item => {
-        item.addEventListener('click', () => openDownloader(item.dataset.downloader));
-    });
-}
-
-// Toggle Sidebar
-function toggleSidebar() {
-    elements.sidebar?.classList.toggle('collapsed');
-    elements.sidebarOverlay?.classList.toggle('active');
-}
-
-function closeSidebar() {
-    elements.sidebar?.classList.add('collapsed');
-    elements.sidebarOverlay?.classList.remove('active');
-}
-
-// Show Chat View
-function showChatView() {
-    elements.welcomeScreen?.classList.remove('hidden');
-    elements.messagesContainer?.classList.add('hidden');
-    elements.toolInterface?.classList.add('hidden');
-    elements.inputArea?.classList.remove('hidden');
-    ChatState.currentTool = null;
-    ChatState.currentDownloader = null;
-}
-
-// Load Conversations from API
-async function loadConversations() {
-    try {
-        const data = await API.getConversations();
-        if (data.success) {
-            ChatState.chats = data.data;
-            renderChatList();
-        }
-    } catch (error) {
-        console.error('Failed to load conversations:', error);
+function openTool(tool) {
+    ChatState.currentTool = tool;
+    const titles = { 'cek-nomor': 'Cek Nomor', 'otp': 'OTP Generator', 'ssweb': 'Screenshot Web', 'translate': 'Translate' };
+    if (el.toolTitle) el.toolTitle.textContent = titles[tool] || tool;
+    if (el.toolContent) {
+        const forms = {
+            'cek-nomor': '<div class="tool-form"><input type="text" id="toolInput1" placeholder="Nomor telepon (contoh: 08123456789)" class="tool-input"><button onclick="executeTool()" class="tool-submit-btn">Cek</button></div>',
+            'otp': '<div class="tool-form"><select id="toolInput1" class="tool-select"><option value="otps">OTP</option><option value="sms">SMS</option></select><input type="number" id="toolInput2" placeholder="Jumlah" value="10" class="tool-input"><button onclick="executeTool()" class="tool-submit-btn">Generate</button></div>',
+            'ssweb': '<div class="tool-form"><input type="text" id="toolInput1" placeholder="URL website" class="tool-input"><button onclick="executeTool()" class="tool-submit-btn">Screenshot</button></div>',
+            'translate': '<div class="tool-form"><textarea id="toolInput1" placeholder="Teks yang akan diterjemahkan" class="tool-textarea"></textarea><select id="toolInput2" class="tool-select"><option value="en">English</option><option value="id">Indonesia</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="ar">Arabic</option></select><button onclick="executeTool()" class="tool-submit-btn">Translate</button></div>'
+        };
+        el.toolContent.innerHTML = forms[tool] || '<p>Tool not available</p>';
     }
+    if (el.toolResult) el.toolResult.innerHTML = '';
+    if (el.toolInterface) el.toolInterface.classList.remove('hidden');
+    if (el.chatContainer) el.chatContainer.style.display = 'none';
 }
 
-// Render Chat List
+function openDownloader(platform) {
+    ChatState.currentDownloader = platform;
+    const titles = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', twitter: 'Twitter', youtube: 'YouTube', 'youtube-mp3': 'YouTube MP3', spotify: 'Spotify', safefileku: 'SafeFileKu' };
+    if (el.toolTitle) el.toolTitle.textContent = (titles[platform] || platform) + ' Downloader';
+    if (el.toolContent) el.toolContent.innerHTML = '<div class="tool-form"><input type="text" id="toolInput1" placeholder="Paste URL here" class="tool-input"><button onclick="executeDownloader()" class="tool-submit-btn">Download</button></div>';
+    if (el.toolResult) el.toolResult.innerHTML = '';
+    if (el.toolInterface) el.toolInterface.classList.remove('hidden');
+    if (el.chatContainer) el.chatContainer.style.display = 'none';
+}
+
+async function executeTool() {
+    const v1 = document.getElementById('toolInput1')?.value;
+    if (!v1) return showToast('Fill in the required field', 'error');
+    if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-loading"><i class="fas fa-spinner fa-spin"></i> Processing...</div>';
+    try {
+        let data;
+        switch (ChatState.currentTool) {
+            case 'cek-nomor': data = await API.cekNomor(v1); break;
+            case 'otp': data = await API.generateOTP(v1, document.getElementById('toolInput2')?.value || '10', 'indonesia'); break;
+            case 'ssweb': data = await API.screenshotWeb(v1); break;
+            case 'translate': data = await API.translate(v1, document.getElementById('toolInput2')?.value || 'en', 'auto'); break;
+        }
+        if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-result-content"><pre>' + escHtml(JSON.stringify(data?.data || data, null, 2)) + '</pre></div>';
+    } catch (e) { if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-error">Error: ' + escHtml(e?.error?.message || 'Failed') + '</div>'; }
+}
+
+async function executeDownloader() {
+    const url = document.getElementById('toolInput1')?.value;
+    if (!url) return showToast('Paste a URL first', 'error');
+    if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-loading"><i class="fas fa-spinner fa-spin"></i> Downloading...</div>';
+    try {
+        const data = await API.download(ChatState.currentDownloader, url);
+        if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-result-content"><pre>' + escHtml(JSON.stringify(data?.data || data, null, 2)) + '</pre></div>';
+    } catch (e) { if (el.toolResult) el.toolResult.innerHTML = '<div class="tool-error">Error: ' + escHtml(e?.error?.message || 'Failed') + '</div>'; }
+}
+
+// ========================================
+// CONVERSATIONS
+// ========================================
+async function loadConversations(q) {
+    if (!el.chatList) return;
+    try {
+        const data = await API.getConversations(q);
+        ChatState.chats = data.data || [];
+        renderChatList();
+    } catch (e) { console.error('Load conversations failed:', e); }
+}
+
 function renderChatList() {
-    if (!elements.chatList) return;
-    elements.chatList.innerHTML = '';
-    
-    ChatState.chats.forEach(chat => {
-        const chatItem = document.createElement('div');
-        chatItem.className = `chat-item ${chat.id === ChatState.currentChatId ? 'active' : ''}`;
-        chatItem.innerHTML = `
-            <i class="fas fa-message chat-item-icon"></i>
-            <span class="chat-item-text">${escapeHtml(chat.title)}</span>
-            <button class="chat-item-delete" data-id="${chat.id}">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-        
-        chatItem.addEventListener('click', (e) => {
-            if (!e.target.closest('.chat-item-delete')) {
-                loadChat(chat.id);
-            }
+    if (!el.chatList) return;
+    if (!ChatState.chats.length) { el.chatList.innerHTML = '<div class="empty-history"><i class="fas fa-comments"></i><p>No conversations yet</p></div>'; return; }
+    el.chatList.innerHTML = ChatState.chats.map(c => `
+        <div class="chat-item ${c.id === ChatState.currentChatId ? 'active' : ''}" data-id="${c.id}">
+            <div class="chat-item-content">
+                <i class="fas fa-message chat-item-icon"></i>
+                <span class="chat-item-title">${escHtml(c.title || 'New Chat')}</span>
+            </div>
+            <div class="chat-item-actions">
+                <button class="chat-item-btn rename-btn" data-id="${c.id}" title="Rename"><i class="fas fa-pen"></i></button>
+                <button class="chat-item-btn delete-btn" data-id="${c.id}" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `).join('');
+
+    el.chatList.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.chat-item-btn')) return;
+            openConversation(item.dataset.id);
         });
-        
-        chatItem.querySelector('.chat-item-delete').addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteChat(chat.id);
-        });
-        
-        elements.chatList.appendChild(chatItem);
+    });
+    el.chatList.querySelectorAll('.rename-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); renameConversation(btn.dataset.id); });
+    });
+    el.chatList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); deleteConversation(btn.dataset.id); });
     });
 }
 
-// Create New Chat
 async function createNewChat() {
     try {
         const data = await API.createConversation('New Chat', ChatState.currentModel);
-        if (data.success) {
-            ChatState.currentChatId = data.data.id;
-            ChatState.chats.unshift(data.data);
-            renderChatList();
-            showWelcomeScreen();
-        }
-    } catch (error) {
-        console.error('Failed to create conversation:', error);
-    }
+        ChatState.currentChatId = data.data.id;
+        await loadConversations();
+        showChatView();
+        if (el.messagesContainer) el.messagesContainer.innerHTML = '';
+        if (el.welcomeScreen) el.welcomeScreen.style.display = '';
+        if (el.inputArea) el.inputArea.style.display = '';
+        if (el.messageInput) el.messageInput.focus();
+    } catch (e) { showToast('Failed to create chat', 'error'); }
 }
 
-// Load Chat
-async function loadChat(chatId) {
+async function openConversation(id) {
     try {
-        const data = await API.getConversation(chatId);
-        if (data.success) {
-            ChatState.currentChatId = chatId;
-            renderChatList();
-            showChatView();
-            renderMessages(data.data.messages);
-            hideWelcomeScreen();
-        }
-    } catch (error) {
-        console.error('Failed to load conversation:', error);
-    }
-}
-
-// Delete Chat
-async function deleteChat(chatId) {
-    try {
-        await API.deleteConversation(chatId);
-        ChatState.chats = ChatState.chats.filter(c => c.id !== chatId);
-        if (ChatState.currentChatId === chatId) {
-            ChatState.currentChatId = null;
-            showWelcomeScreen();
-        }
+        const data = await API.getConversation(id);
+        ChatState.currentChatId = id;
+        showChatView();
+        renderMessages(data.data.messages || []);
+        if (el.welcomeScreen) el.welcomeScreen.style.display = 'none';
+        closeSidebar();
         renderChatList();
-    } catch (error) {
-        console.error('Failed to delete conversation:', error);
-    }
+    } catch (e) { showToast('Failed to load conversation', 'error'); }
 }
 
-// Show/Hide Welcome Screen
-function showWelcomeScreen() {
-    elements.welcomeScreen?.classList.remove('hidden');
-    elements.messagesContainer?.classList.add('hidden');
-}
-
-function hideWelcomeScreen() {
-    elements.welcomeScreen?.classList.add('hidden');
-    elements.messagesContainer?.classList.remove('hidden');
-}
-
-// Handle Input Change
-function handleInputChange() {
-    const input = elements.messageInput;
-    if (!input) return;
-    
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 200) + 'px';
-    
-    const hasText = input.value.trim().length > 0;
-    elements.sendBtn.disabled = !hasText || ChatState.isGenerating;
-}
-
-// Handle Key Down
-function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-}
-
-// Send Message
-async function sendMessage() {
-    const message = elements.messageInput.value.trim();
-    if (!message || ChatState.isGenerating) return;
-    
-    // Check daily limit
-    if (!checkDailyLimit()) {
-        showError('Daily message limit reached. Please upgrade your plan.');
-        return;
-    }
-    
-    // Check model access
-    if (!hasModelAccess(ChatState.currentModel)) {
-        showError(`You don't have access to ${ChatState.currentModel}. Please upgrade your plan.`);
-        return;
-    }
-    
-    // Create new chat if none exists
-    if (!ChatState.currentChatId) {
-        await createNewChat();
-    }
-    
-    // Add user message to UI
-    const userMessage = {
-        role: 'user',
-        content: message,
-        createdAt: new Date().toISOString()
-    };
-    
-    hideWelcomeScreen();
-    appendMessage(userMessage);
-    
-    // Clear input
-    elements.messageInput.value = '';
-    handleInputChange();
-    
-    // Show typing indicator
-    showTypingIndicator();
-    
+async function renameConversation(id) {
+    const chat = ChatState.chats.find(c => c.id === id);
+    const newTitle = prompt('Rename conversation:', chat?.title || '');
+    if (!newTitle || newTitle === chat?.title) return;
     try {
-        ChatState.isGenerating = true;
-        elements.sendBtn.disabled = true;
-        
-        // Send to API
-        const data = await API.sendMessage(ChatState.currentChatId, message, ChatState.currentModel);
-        
-        hideTypingIndicator();
-        
-        if (data.success) {
-            // Add AI message to UI
-            appendMessage(data.data.message);
-            
-            // Update conversation title if needed
-            if (data.data.conversation) {
-                const chatIndex = ChatState.chats.findIndex(c => c.id === data.data.conversation.id);
-                if (chatIndex !== -1) {
-                    ChatState.chats[chatIndex].title = data.data.conversation.title;
-                    renderChatList();
-                }
-            }
-            
-            // Increment usage
-            incrementDailyUsage();
-        }
-    } catch (error) {
-        hideTypingIndicator();
-        console.error('Chat error:', error);
-        showError(error.error?.message || 'Failed to get response. Please try again.');
-    } finally {
+        await API.updateConversation(id, newTitle);
+        await loadConversations();
+        showToast('Renamed', 'success');
+    } catch (e) { showToast('Failed to rename', 'error'); }
+}
+
+async function deleteConversation(id) {
+    if (!confirm('Delete this conversation?')) return;
+    try {
+        await API.deleteConversation(id);
+        if (ChatState.currentChatId === id) { ChatState.currentChatId = null; showWelcome(); }
+        await loadConversations();
+        showToast('Deleted', 'success');
+    } catch (e) { showToast('Failed to delete', 'error'); }
+}
+
+// ========================================
+// MESSAGES
+// ========================================
+function renderMessages(msgs) {
+    if (!el.messagesContainer) return;
+    el.messagesContainer.innerHTML = '';
+    msgs.forEach(m => appendMessage(m.role, m.content, m.model, m.id));
+    scrollToBottom();
+}
+
+function appendMessage(role, content, model, id) {
+    if (!el.messagesContainer) return;
+    if (el.welcomeScreen) el.welcomeScreen.style.display = 'none';
+    const div = document.createElement('div');
+    div.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
+    div.dataset.id = id || '';
+
+    const avatar = role === 'user' ? '<div class="message-avatar user-avatar"><i class="fas fa-user"></i></div>' : '<div class="message-avatar ai-avatar"><img src="https://j.top4top.io/p_3903uecld0.png" alt="AI"></div>';
+
+    let actions = '';
+    if (role === 'assistant') {
+        actions = `<div class="message-actions">
+            <button class="msg-action-btn copy-btn" data-msg="${escHtml(content)}" title="Copy"><i class="fas fa-copy"></i></button>
+        </div>`;
+    }
+
+    div.innerHTML = `${avatar}<div class="message-body"><div class="message-content">${renderMarkdown(content)}</div>${actions}</div>`;
+    el.messagesContainer.appendChild(div);
+
+    div.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            navigator.clipboard.writeText(btn.dataset.msg).then(() => {
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = btn.dataset.msg;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
+            });
+        });
+    });
+}
+
+function renderMarkdown(text) {
+    if (!text) return '';
+    let html = text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/^\- (.+)$/gm, '<li>$1</li>')
+        .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="msg-image" style="max-width:100%;border-radius:8px;margin:8px 0">')
+        .replace(/\n/g, '<br>');
+    return html;
+}
+
+function scrollToBottom() { if (el.messagesContainer) el.messagesContainer.scrollTop = el.messagesContainer.scrollHeight; }
+
+// ========================================
+// SEND MESSAGE
+// ========================================
+async function sendMessage() {
+    const msg = el.messageInput?.value?.trim();
+    if (!msg || ChatState.isGenerating) return;
+
+    if (!ChatState.currentChatId) {
+        try {
+            const data = await API.createConversation(msg.substring(0, 50), ChatState.currentModel);
+            ChatState.currentChatId = data.data.id;
+            await loadConversations();
+        } catch (e) { showToast('Failed to create chat', 'error'); return; }
+    }
+
+    el.messageInput.value = '';
+    handleInputChange();
+    appendMessage('user', msg);
+    scrollToBottom();
+
+    ChatState.isGenerating = true;
+    showGeneratingState();
+
+    try {
+        const data = await API.sendMessage(ChatState.currentChatId, msg, ChatState.currentModel);
         ChatState.isGenerating = false;
-        elements.sendBtn.disabled = false;
+        hideGeneratingState();
+        if (data.data?.message) {
+            appendMessage('assistant', data.data.message.content, data.data.message.model, data.data.message.id);
+            scrollToBottom();
+        }
+        if (data.data?.conversation?.title) {
+            const idx = ChatState.chats.findIndex(c => c.id === ChatState.currentChatId);
+            if (idx !== -1) ChatState.chats[idx].title = data.data.conversation.title;
+            renderChatList();
+        }
+    } catch (e) {
+        ChatState.isGenerating = false;
+        hideGeneratingState();
+        appendMessage('assistant', '⚠️ Error: ' + (e?.error?.message || 'Failed to get response. Please try again.'));
+        scrollToBottom();
     }
 }
 
-// Append Message
-function appendMessage(message) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.role === 'user' ? 'user-message' : 'assistant-message'}`;
-    
-    const avatarIcon = message.role === 'user' ? 'fa-user' : 'fa-robot';
-    
-    messageDiv.innerHTML = `
-        <div class="message-avatar">
-            <i class="fas ${avatarIcon}"></i>
-        </div>
-        <div class="message-content">
-            <div class="message-text">${formatMessage(message.content)}</div>
-        </div>
-    `;
-    
-    elements.messagesContainer.appendChild(messageDiv);
-    scrollToBottom();
-    
-    // Apply syntax highlighting
-    messageDiv.querySelectorAll('pre code').forEach(block => {
-        if (typeof hljs !== 'undefined') hljs.highlightElement(block);
-    });
-    
-    // Add copy functionality
-    messageDiv.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.addEventListener('click', handleCopyCode);
-    });
-}
-
-// Render Messages
-function renderMessages(messages) {
-    elements.messagesContainer.innerHTML = '';
-    messages.forEach(msg => appendMessage(msg));
-}
-
-// Format Message
-function formatMessage(text) {
-    if (!text) return '';
-    
-    let formatted = escapeHtml(text);
-    
-    // Code blocks
-    formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-        const language = lang || 'plaintext';
-        return `<div class="code-block"><div class="code-header"><span class="language">${language}</span><button class="copy-btn"><i class="fas fa-copy"></i><span>Copy</span></button></div><pre><code class="language-${language}">${code.trim()}</code></pre></div>`;
-    });
-    
-    formatted = formatted.replace(/```\n?([\s\S]*?)```/g, (match, code) => {
-        return `<div class="code-block"><div class="code-header"><span class="language">plaintext</span><button class="copy-btn"><i class="fas fa-copy"></i><span>Copy</span></button></div><pre><code class="language-plaintext">${code.trim()}</code></pre></div>`;
-    });
-    
-    // Inline code
-    formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-    
-    // Bold
-    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
-    // Italic
-    formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    
-    // Headers
-    formatted = formatted.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    formatted = formatted.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-    formatted = formatted.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-    
-    // Links
-    formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-    
-    // Line breaks
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    return formatted;
-}
-
-// Escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Handle Copy Code
-function handleCopyCode(e) {
-    const btn = e.currentTarget;
-    const codeBlock = btn.closest('.code-block');
-    const code = codeBlock.querySelector('code').textContent;
-    
-    navigator.clipboard.writeText(code).then(() => {
-        btn.classList.add('copied');
-        btn.innerHTML = '<i class="fas fa-check"></i><span>Copied!</span>';
-        setTimeout(() => {
-            btn.classList.remove('copied');
-            btn.innerHTML = '<i class="fas fa-copy"></i><span>Copy</span>';
-        }, 2000);
-    });
-}
-
-// Typing Indicator
-function showTypingIndicator() {
-    const indicator = document.createElement('div');
-    indicator.className = 'message assistant-message';
-    indicator.id = 'typingIndicator';
-    indicator.innerHTML = `
-        <div class="message-avatar"><i class="fas fa-robot"></i></div>
-        <div class="message-content">
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
-        </div>
-    `;
-    elements.messagesContainer.appendChild(indicator);
+function showGeneratingState() {
+    if (el.sendBtn) el.sendBtn.style.display = 'none';
+    if (el.stopBtn) { el.stopBtn.style.display = ''; el.stopBtn.onclick = stopGeneration; }
+    const typing = document.createElement('div');
+    typing.className = 'message ai-message typing-indicator';
+    typing.id = 'typingIndicator';
+    typing.innerHTML = '<div class="message-avatar ai-avatar"><img src="https://j.top4top.io/p_3903uecld0.png" alt="AI"></div><div class="message-body"><div class="message-content"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+    el.messagesContainer?.appendChild(typing);
     scrollToBottom();
 }
 
-function hideTypingIndicator() {
+function hideGeneratingState() {
+    if (el.sendBtn) el.sendBtn.style.display = '';
+    if (el.stopBtn) el.stopBtn.style.display = 'none';
     document.getElementById('typingIndicator')?.remove();
 }
 
-// Show Error
-function showError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${message}</span>`;
-    elements.messagesContainer.appendChild(errorDiv);
-    scrollToBottom();
-    setTimeout(() => errorDiv.remove(), 5000);
+function stopGeneration() {
+    if (ChatState.abortController) ChatState.abortController.abort();
+    ChatState.isGenerating = false;
+    hideGeneratingState();
 }
 
-// Scroll to Bottom
-function scrollToBottom() {
-    if (elements.chatContainer) {
-        elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
-    }
+function showChatView() {
+    if (el.chatContainer) el.chatContainer.style.display = '';
+    if (el.toolInterface) el.toolInterface.classList.add('hidden');
+    if (el.inputArea) el.inputArea.style.display = '';
 }
 
-// Logout
-async function handleLogout(e) {
-    e.preventDefault();
+function showWelcome() {
+    if (el.welcomeScreen) el.welcomeScreen.style.display = '';
+    if (el.messagesContainer) el.messagesContainer.innerHTML = '';
+    if (el.inputArea) el.inputArea.style.display = '';
+}
+
+// ========================================
+// INPUT HANDLERS
+// ========================================
+function handleInputChange() {
+    if (!el.messageInput || !el.sendBtn) return;
+    const hasText = el.messageInput.value.trim().length > 0;
+    el.sendBtn.disabled = !hasText;
+    el.messageInput.style.height = 'auto';
+    el.messageInput.style.height = Math.min(el.messageInput.scrollHeight, 200) + 'px';
+}
+
+function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// ========================================
+// VOICE
+// ========================================
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let recordingTimer = null;
+let recordingSeconds = 0;
+
+function setupVoice() {
+    if (!el.micBtn) return;
+    el.micBtn.addEventListener('click', toggleRecording);
+}
+
+async function toggleRecording() {
+    if (isRecording) { stopRecording(); return; }
     try {
-        await API.logout();
-    } catch (error) {
-        console.error('Logout error:', error);
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => processAudio();
+        mediaRecorder.start();
+        isRecording = true;
+        recordingSeconds = 0;
+        el.micBtn?.classList.add('recording');
+        const indicator = document.getElementById('recordingIndicator');
+        if (indicator) indicator.classList.add('active');
+        recordingTimer = setInterval(() => {
+            recordingSeconds++;
+            const timerEl = document.getElementById('recordingTimer');
+            if (timerEl) timerEl.textContent = formatTime(recordingSeconds);
+        }, 1000);
+    } catch (e) { showToast('Microphone permission denied', 'error'); }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    isRecording = false;
+    el.micBtn?.classList.remove('recording');
+    const indicator = document.getElementById('recordingIndicator');
+    if (indicator) indicator.classList.remove('active');
+    clearInterval(recordingTimer);
+    if (mediaRecorder?.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
+}
+
+function cancelRecording() {
+    audioChunks = [];
+    stopRecording();
+}
+
+async function processAudio() {
+    if (!audioChunks.length) return;
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+        const base64 = reader.result.split(',')[1];
+        try {
+            const data = await API.speechToText(base64);
+            if (data.data?.text) {
+                el.messageInput.value = data.data.text;
+                handleInputChange();
+                showToast('Transcription complete', 'success');
+            } else { showToast('No speech detected', 'warning'); }
+        } catch (e) { showToast('Speech recognition failed', 'error'); }
+    };
+    reader.readAsDataURL(blob);
+}
+
+function formatTime(s) { const m = Math.floor(s / 60); return `${m}:${(s % 60).toString().padStart(2, '0')}`; }
+
+// ========================================
+// FILE UPLOAD
+// ========================================
+function setupFileUpload() {
+    if (el.attachBtn) el.attachBtn.addEventListener('click', () => el.fileInput?.click());
+    if (el.fileInput) el.fileInput.addEventListener('change', handleFileSelect);
+}
+
+async function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { showToast('File too large (max 10MB)', 'error'); return; }
+    if (el.attachmentPreview) {
+        el.attachmentPreview.innerHTML = `
+            <div class="attachment-item">
+                <i class="fas ${file.type.startsWith('image/') ? 'fa-image' : 'fa-file'}"></i>
+                <span>${escHtml(file.name)} (${(file.size / 1024).toFixed(1)}KB)</span>
+                <button onclick="removeAttachment()" class="remove-attachment"><i class="fas fa-times"></i></button>
+            </div>`;
+        el.attachmentPreview.style.display = '';
     }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+        const base64 = reader.result.split(',')[1];
+        try { await API.uploadFile(base64, file.name, file.type); } catch (e) { console.error('Upload failed:', e); }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+}
+
+function removeAttachment() {
+    if (el.attachmentPreview) { el.attachmentPreview.innerHTML = ''; el.attachmentPreview.style.display = 'none'; }
+}
+
+// ========================================
+// LOGOUT
+// ========================================
+async function handleLogout() {
+    try { await API.logout(); } catch {}
     localStorage.removeItem('mazval_user');
     localStorage.removeItem('mazval_token');
     window.location.href = 'login.html';
 }
 
 // ========================================
-// Tools Functions
+// UTILS
 // ========================================
-
-function openTool(toolName) {
-    ChatState.currentTool = toolName;
-    ChatState.currentDownloader = null;
-    
-    elements.welcomeScreen?.classList.add('hidden');
-    elements.messagesContainer?.classList.add('hidden');
-    elements.inputArea?.classList.add('hidden');
-    elements.toolInterface?.classList.remove('hidden');
-    
-    const toolTitles = {
-        'cek-nomor': 'Cek Nomor Telepon',
-        'otp': 'OTP Generator',
-        'ssweb': 'Screenshot Website',
-        'translate': 'Translate Text'
-    };
-    elements.toolTitle.textContent = toolTitles[toolName] || 'Tool';
-    
-    renderToolForm(toolName);
+function escHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type || 'info');
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    t.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i><span>${msg}</span>`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
 }
 
-function renderToolForm(toolName) {
-    let formHTML = '';
-    
-    switch (toolName) {
-        case 'cek-nomor':
-            formHTML = `
-                <div class="tool-content">
-                    <h3><i class="fas fa-phone-alt"></i> Cek Nomor Telepon</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 16px;">Masukkan nomor telepon untuk mengecek informasinya.</p>
-                    <div class="tool-form">
-                        <div class="form-group">
-                            <label>Nomor Telepon</label>
-                            <input type="text" id="cekNomorInput" placeholder="Contoh: 081234567890">
-                        </div>
-                        <button class="tool-execute-btn" onclick="executeCekNomor()">
-                            <i class="fas fa-search"></i> Cek Nomor
-                        </button>
-                    </div>
-                </div>
-            `;
-            break;
-        case 'otp':
-            formHTML = `
-                <div class="tool-content">
-                    <h3><i class="fas fa-key"></i> OTP Generator</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 16px;">Generate OTP untuk berbagai keperluan.</p>
-                    <div class="tool-form">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Tipe OTP</label>
-                                <select id="otpType">
-                                    <option value="otps">OTPS (Alphabet)</option>
-                                    <option value="numbers">Numbers Only</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Jumlah</label>
-                                <input type="number" id="otpLimit" value="20" min="1" max="100">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Negara</label>
-                            <select id="otpCountry">
-                                <option value="indonesia">Indonesia</option>
-                                <option value="us">United States</option>
-                                <option value="uk">United Kingdom</option>
-                            </select>
-                        </div>
-                        <button class="tool-execute-btn" onclick="executeOTP()">
-                            <i class="fas fa-random"></i> Generate OTP
-                        </button>
-                    </div>
-                </div>
-            `;
-            break;
-        case 'ssweb':
-            formHTML = `
-                <div class="tool-content">
-                    <h3><i class="fas fa-camera"></i> Screenshot Website</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 16px;">Ambil screenshot dari website.</p>
-                    <div class="tool-form">
-                        <div class="form-group">
-                            <label>URL Website</label>
-                            <input type="url" id="sswebUrl" placeholder="https://example.com">
-                        </div>
-                        <button class="tool-execute-btn" onclick="executeSSWeb()">
-                            <i class="fas fa-camera"></i> Screenshot
-                        </button>
-                    </div>
-                </div>
-            `;
-            break;
-        case 'translate':
-            formHTML = `
-                <div class="tool-content">
-                    <h3><i class="fas fa-language"></i> Translate Text</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 16px;">Terjemahkan teks ke bahasa lain.</p>
-                    <div class="tool-form">
-                        <div class="form-group">
-                            <label>Teks</label>
-                            <textarea id="translateText" rows="3" placeholder="Masukkan teks yang akan diterjemahkan"></textarea>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Dari Bahasa</label>
-                                <select id="translateFrom">
-                                    <option value="auto">Auto Detect</option>
-                                    <option value="id">Indonesia</option>
-                                    <option value="en">English</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Ke Bahasa</label>
-                                <select id="translateTo">
-                                    <option value="en">English</option>
-                                    <option value="id">Indonesia</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button class="tool-execute-btn" onclick="executeTranslate()">
-                            <i class="fas fa-language"></i> Translate
-                        </button>
-                    </div>
-                </div>
-            `;
-            break;
-    }
-    
-    elements.toolContent.innerHTML = formHTML;
-    elements.toolResult.innerHTML = '';
-}
-
-// Execute Tools
-async function executeCekNomor() {
-    const nomor = document.getElementById('cekNomorInput')?.value.trim();
-    if (!nomor) { alert('Masukkan nomor telepon!'); return; }
-    
-    showToolLoading();
-    try {
-        const data = await API.cekNomor(nomor);
-        displayToolResult(data.data, 'Cek Nomor');
-    } catch (error) {
-        showToolError(error.error?.message || 'Gagal mengecek nomor');
-    }
-}
-
-async function executeOTP() {
-    const type = document.getElementById('otpType')?.value || 'otps';
-    const limit = document.getElementById('otpLimit')?.value || '20';
-    const country = document.getElementById('otpCountry')?.value || 'indonesia';
-    
-    showToolLoading();
-    try {
-        const data = await API.generateOTP(type, limit, country);
-        displayToolResult(data.data, 'OTP Generator');
-    } catch (error) {
-        showToolError(error.error?.message || 'Gagal generate OTP');
-    }
-}
-
-async function executeSSWeb() {
-    const url = document.getElementById('sswebUrl')?.value.trim();
-    if (!url) { alert('Masukkan URL website!'); return; }
-    
-    showToolLoading();
-    try {
-        const data = await API.screenshotWeb(url);
-        displayToolResult(data.data, 'Screenshot');
-    } catch (error) {
-        showToolError(error.error?.message || 'Gagal screenshot');
-    }
-}
-
-async function executeTranslate() {
-    const text = document.getElementById('translateText')?.value.trim();
-    const from = document.getElementById('translateFrom')?.value || 'auto';
-    const to = document.getElementById('translateTo')?.value || 'en';
-    
-    if (!text) { alert('Masukkan teks!'); return; }
-    
-    showToolLoading();
-    try {
-        const data = await API.translate(text, to, from);
-        displayToolResult(data.data, 'Translate');
-    } catch (error) {
-        showToolError(error.error?.message || 'Gagal translate');
-    }
-}
-
-function showToolLoading() {
-    elements.toolResult.innerHTML = `
-        <div class="tool-result">
-            <div class="loading-overlay" style="position: relative; min-height: 100px;">
-                <div class="spinner"></div>
-                <span class="loading-text">Processing...</span>
-            </div>
-        </div>
-    `;
-}
-
-function showToolError(message) {
-    elements.toolResult.innerHTML = `
-        <div class="tool-result">
-            <div class="tool-result-header">
-                <h3><i class="fas fa-exclamation-circle" style="color: var(--danger);"></i> Error</h3>
-            </div>
-            <div class="tool-result-content">
-                <p>${message}</p>
-            </div>
-        </div>
-    `;
-}
-
-function displayToolResult(data, title) {
-    let contentHTML = '';
-    
-    if (data.url) {
-        contentHTML = `<div class="media-preview"><img src="${data.url}" alt="${title}" onerror="this.parentElement.innerHTML='<p>Failed to load</p>'"></div>`;
-    } else if (data.translation || data.translated || data.result) {
-        contentHTML = `<p style="font-size: 1.1rem; line-height: 1.6;">${data.translation || data.translated || data.result}</p>`;
-    } else if (Array.isArray(data) || data.otp || data.otps || data.numbers) {
-        const otps = data.otp || data.otps || data.numbers || data;
-        if (Array.isArray(otps)) {
-            contentHTML = `<div class="otp-grid">${otps.map(otp => `<div class="otp-item" onclick="navigator.clipboard.writeText('${otp}')">${otp}</div>`).join('')}</div>`;
-        }
-    } else if (data.nomor || data.number) {
-        contentHTML = `<div class="info-card"><p><strong>Nomor:</strong> ${data.nomor || data.number}</p><p><strong>Operator:</strong> ${data.operator || '-'}</p></div>`;
-    } else {
-        contentHTML = `<pre style="white-space: pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
-    }
-    
-    elements.toolResult.innerHTML = `
-        <div class="tool-result">
-            <div class="tool-result-header">
-                <h3><i class="fas fa-check-circle"></i> ${title} Result</h3>
-            </div>
-            <div class="tool-result-content">${contentHTML}</div>
-        </div>
-    `;
-}
-
-// ========================================
-// Downloaders Functions
-// ========================================
-
-function openDownloader(downloaderName) {
-    ChatState.currentDownloader = downloaderName;
-    ChatState.currentTool = null;
-    
-    elements.welcomeScreen?.classList.add('hidden');
-    elements.messagesContainer?.classList.add('hidden');
-    elements.inputArea?.classList.add('hidden');
-    elements.toolInterface?.classList.remove('hidden');
-    
-    const downloaderTitles = {
-        'instagram': 'Instagram Downloader',
-        'facebook': 'Facebook Downloader',
-        'tiktok': 'TikTok Downloader',
-        'twitter': 'Twitter/X Downloader',
-        'youtube': 'YouTube Downloader',
-        'youtube-mp3': 'YouTube MP3 Downloader',
-        'spotify': 'Spotify Downloader',
-        'safefileku': 'SafeFileKu Downloader'
-    };
-    elements.toolTitle.textContent = downloaderTitles[downloaderName] || 'Downloader';
-    
-    const icons = {
-        'instagram': 'fab fa-instagram',
-        'facebook': 'fab fa-facebook',
-        'tiktok': 'fab fa-tiktok',
-        'twitter': 'fab fa-twitter',
-        'youtube': 'fab fa-youtube',
-        'youtube-mp3': 'fas fa-music',
-        'spotify': 'fab fa-spotify',
-        'safefileku': 'fas fa-file-download'
-    };
-    
-    elements.toolContent.innerHTML = `
-        <div class="tool-content">
-            <h3><i class="${icons[downloaderName]}"></i> ${downloaderTitles[downloaderName]}</h3>
-            <p style="color: var(--text-muted); margin-bottom: 16px;">Masukkan URL yang ingin didownload.</p>
-            <div class="tool-form">
-                <div class="form-group">
-                    <label>URL</label>
-                    <input type="url" id="downloaderUrl" placeholder="Masukkan URL...">
-                </div>
-                <button class="tool-execute-btn" onclick="executeDownloader()">
-                    <i class="fas fa-download"></i> Download
-                </button>
-            </div>
-        </div>
-    `;
-    elements.toolResult.innerHTML = '';
-}
-
-async function executeDownloader() {
-    const url = document.getElementById('downloaderUrl')?.value.trim();
-    if (!url) { alert('Masukkan URL!'); return; }
-    
-    showToolLoading();
-    try {
-        const data = await API.download(ChatState.currentDownloader, url);
-        displayToolResult(data.data, 'Download');
-    } catch (error) {
-        showToolError(error.error?.message || 'Gagal download');
-    }
-}
-
-// ========================================
-// Custom Model Selector
-// ========================================
-
-function setupModelSelector() {
-    const selector = document.getElementById('modelSelector');
-    const current = document.getElementById('modelCurrent');
-    const dropdown = document.getElementById('modelDropdown');
-    const options = document.querySelectorAll('.model-option');
-    const hiddenSelect = document.getElementById('modelSelect');
-    
-    if (!selector || !current || !dropdown) return;
-    
-    current.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selector.classList.toggle('open');
-    });
-    
-    document.addEventListener('click', (e) => {
-        if (!selector.contains(e.target)) {
-            selector.classList.remove('open');
-        }
-    });
-    
-    options.forEach(option => {
-        option.addEventListener('click', () => {
-            const model = option.dataset.model;
-            const name = option.querySelector('span:last-child').textContent;
-            const icon = option.querySelector('.model-icon i').className;
-            
-            options.forEach(o => o.classList.remove('active'));
-            option.classList.add('active');
-            
-            current.querySelector('.model-name').textContent = name;
-            current.querySelector('.model-icon i').className = icon;
-            
-            if (hiddenSelect) {
-                hiddenSelect.value = model;
-                hiddenSelect.dispatchEvent(new Event('change'));
-            }
-            
-            ChatState.currentModel = model;
-            selector.classList.remove('open');
-        });
-    });
-}
-
-// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', init);

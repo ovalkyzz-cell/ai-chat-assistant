@@ -1,9 +1,9 @@
-<script>var _au=localStorage.getItem('mazval_user');if(!_au){document.write('<script>location.href="login.html"<\/script>');throw'x';}try{var _u=JSON.parse(_au);if(_u.role==='admin'){document.write('<script>location.href="admin.html"<\/script>');throw'x';}if(_u.status!=='approved'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}catch(e){if(e!=='x'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}</script><!DOCTYPE html>
+<script>var _au=localStorage.getItem('mazval_user');if(!_au){document.write('<script>location.href="login.html"<\/script>');throw'x';}try{var _u=JSON.parse(_au);if(_u.role==='admin'&&window.location.pathname.indexOf('admin')===-1){}if(_u.status!=='approved'&&_u.role!=='admin'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}catch(e){if(e!=='x'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}</script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat Assistant</title>
+    <title>Mazval GPT AI</title>
     <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -12,323 +12,149 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar Overlay -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <!-- Sidebar -->
+        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
-                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="logo-img">
-                    <span class="logo-text">AI Chat</span>
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI" class="logo-img">
+                    <span class="logo-text">Mazval GPT AI</span>
                 </div>
-                <button class="new-chat-btn" id="newChatBtn">
-                    <i class="fas fa-plus"></i>
-                    <span>New Chat</span>
-                </button>
+                <button class="new-chat-btn" id="newChatBtn"><i class="fas fa-plus"></i><span>New Chat</span></button>
             </div>
 
-            <!-- Sidebar Navigation -->
             <div class="sidebar-nav">
-                <button class="nav-tab active" data-tab="chats">
-                    <i class="fas fa-comments"></i>
-                    <span>Chats</span>
-                </button>
-                <button class="nav-tab" data-tab="tools">
-                    <i class="fas fa-tools"></i>
-                    <span>Tools</span>
-                </button>
-                <button class="nav-tab" data-tab="downloaders">
-                    <i class="fas fa-download"></i>
-                    <span>Downloaders</span>
-                </button>
+                <button class="nav-tab active" data-tab="chats"><i class="fas fa-comments"></i><span>Chats</span></button>
+                <button class="nav-tab" data-tab="tools"><i class="fas fa-tools"></i><span>Tools</span></button>
+                <button class="nav-tab" data-tab="downloaders"><i class="fas fa-download"></i><span>Downloaders</span></button>
             </div>
 
-            <!-- Chat History -->
-            <div class="sidebar-content" id="chatsPanel">
-                <div class="history-section">
-                    <div class="history-label">Today</div>
-                    <div id="chatList"></div>
+            <!-- Chats Panel -->
+            <div class="sidebar-panel" id="chatsPanel">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="historySearch" placeholder="Search conversations...">
+                </div>
+                <div class="chat-list" id="chatList">
+                    <div class="empty-history"><i class="fas fa-comments"></i><p>No conversations yet</p></div>
                 </div>
             </div>
 
             <!-- Tools Panel -->
-            <div class="sidebar-content hidden" id="toolsPanel">
-                <div class="tools-list">
-                    <div class="tool-item" data-tool="cek-nomor">
-                        <i class="fas fa-phone-alt"></i>
-                        <span>Cek Nomor</span>
-                    </div>
-                    <div class="tool-item" data-tool="otp">
-                        <i class="fas fa-key"></i>
-                        <span>OTP Generator</span>
-                    </div>
-                    <div class="tool-item" data-tool="ssweb">
-                        <i class="fas fa-camera"></i>
-                        <span>Screenshot Web</span>
-                    </div>
-                    <div class="tool-item" data-tool="translate">
-                        <i class="fas fa-language"></i>
-                        <span>Translate</span>
-                    </div>
+            <div class="sidebar-panel hidden" id="toolsPanel">
+                <div class="panel-list">
+                    <div class="tool-item" data-tool="cek-nomor"><i class="fas fa-phone"></i><span>Cek Nomor</span></div>
+                    <div class="tool-item" data-tool="otp"><i class="fas fa-key"></i><span>OTP Generator</span></div>
+                    <div class="tool-item" data-tool="ssweb"><i class="fas fa-camera"></i><span>Screenshot Web</span></div>
+                    <div class="tool-item" data-tool="translate"><i class="fas fa-language"></i><span>Translate</span></div>
                 </div>
             </div>
 
             <!-- Downloaders Panel -->
-            <div class="sidebar-content hidden" id="downloadersPanel">
-                <div class="tools-list">
-                    <div class="tool-item" data-downloader="instagram">
-                        <i class="fab fa-instagram"></i>
-                        <span>Instagram</span>
-                    </div>
-                    <div class="tool-item" data-downloader="facebook">
-                        <i class="fab fa-facebook"></i>
-                        <span>Facebook</span>
-                    </div>
-                    <div class="tool-item" data-downloader="tiktok">
-                        <i class="fab fa-tiktok"></i>
-                        <span>TikTok</span>
-                    </div>
-                    <div class="tool-item" data-downloader="twitter">
-                        <i class="fab fa-twitter"></i>
-                        <span>Twitter/X</span>
-                    </div>
-                    <div class="tool-item" data-downloader="youtube">
-                        <i class="fab fa-youtube"></i>
-                        <span>YouTube</span>
-                    </div>
-                    <div class="tool-item" data-downloader="youtube-mp3">
-                        <i class="fas fa-music"></i>
-                        <span>YouTube MP3</span>
-                    </div>
-                    <div class="tool-item" data-downloader="spotify">
-                        <i class="fab fa-spotify"></i>
-                        <span>Spotify</span>
-                    </div>
-                    <div class="tool-item" data-downloader="safefileku">
-                        <i class="fas fa-file-download"></i>
-                        <span>SafeFileKu</span>
-                    </div>
+            <div class="sidebar-panel hidden" id="downloadersPanel">
+                <div class="panel-list">
+                    <div class="tool-item" data-downloader="instagram"><i class="fab fa-instagram"></i><span>Instagram</span></div>
+                    <div class="tool-item" data-downloader="facebook"><i class="fab fa-facebook"></i><span>Facebook</span></div>
+                    <div class="tool-item" data-downloader="tiktok"><i class="fab fa-tiktok"></i><span>TikTok</span></div>
+                    <div class="tool-item" data-downloader="twitter"><i class="fab fa-twitter"></i><span>Twitter</span></div>
+                    <div class="tool-item" data-downloader="youtube"><i class="fab fa-youtube"></i><span>YouTube</span></div>
+                    <div class="tool-item" data-downloader="youtube-mp3"><i class="fas fa-music"></i><span>YouTube MP3</span></div>
+                    <div class="tool-item" data-downloader="spotify"><i class="fab fa-spotify"></i><span>Spotify</span></div>
+                    <div class="tool-item" data-downloader="safefileku"><i class="fas fa-file-download"></i><span>SafeFileKu</span></div>
                 </div>
             </div>
 
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <a href="pricing.html" class="upgrade-btn" id="upgradeBtn">
-                    <i class="fas fa-crown"></i>
-                    <span>Upgrade Plan</span>
-                </a>
-                <div class="user-info" id="userInfo">
-                    <div class="user-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <span class="user-name" id="userName">User</span>
+            <!-- Tool Interface -->
+            <div class="sidebar-panel hidden" id="toolInterface">
+                <div class="tool-interface-header">
+                    <button class="back-btn" id="backToChat"><i class="fas fa-arrow-left"></i></button>
+                    <h3 id="toolTitle">Tool</h3>
                 </div>
-                <a href="login.html" class="logout-btn" id="logoutBtn" title="Logout">
-                    <i class="fas fa-sign-out-alt"></i>
-                </a>
+                <div class="tool-content" id="toolContent"></div>
+                <div class="tool-result" id="toolResult"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <a href="pricing.html" class="sidebar-link" data-page="pricing"><i class="fas fa-crown"></i><span>Upgrade Plan</span></a>
+                <a href="#" class="sidebar-link" data-page="settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+                <a href="#" class="sidebar-link" data-page="help"><i class="fas fa-question-circle"></i><span>Help</span></a>
+                <a href="admin.html" class="sidebar-link" id="adminLink" style="display:none"><i class="fas fa-shield-alt"></i><span>Admin Dashboard</span></a>
+                <div class="sidebar-divider"></div>
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar"><i class="fas fa-user"></i></div>
+                    <span id="userName">User</span>
+                </div>
+                <button class="sidebar-link logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></button>
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- MAIN CONTENT -->
         <main class="main-content">
-            <!-- Header -->
-            <header class="main-header">
-                <button class="sidebar-toggle" id="sidebarToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="header-brand">
-                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="header-logo">
-                    <h1 class="chat-title">AI Chat Assistant</h1>
-                </div>
+            <header class="chat-header">
+                <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
                 <div class="model-selector" id="modelSelector">
-                    <div class="model-current" id="modelCurrent">
-                        <span class="model-icon"><i class="fas fa-robot"></i></span>
+                    <button class="model-current" id="modelCurrent">
+                        <i class="fas fa-robot"></i>
                         <span class="model-name">ChatGPT</span>
-                        <i class="fas fa-chevron-down model-arrow"></i>
-                    </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="model-dropdown" id="modelDropdown">
-                        <div class="model-group">
-                            <div class="model-group-label">AI Models</div>
-                            <div class="model-option active" data-model="chatgpt">
-                                <span class="model-icon"><i class="fas fa-comment-dots"></i></span>
-                                <span>ChatGPT</span>
-                            </div>
-                            <div class="model-option" data-model="gemini">
-                                <span class="model-icon"><i class="fas fa-gem"></i></span>
-                                <span>Gemini</span>
-                            </div>
-                            <div class="model-option" data-model="copilot">
-                                <span class="model-icon"><i class="fas fa-plane"></i></span>
-                                <span>Copilot</span>
-                            </div>
-                            <div class="model-option" data-model="apertus">
-                                <span class="model-icon"><i class="fas fa-globe"></i></span>
-                                <span>Apertus</span>
-                            </div>
-                            <div class="model-option" data-model="claude-opus">
-                                <span class="model-icon"><i class="fas fa-brain"></i></span>
-                                <span>Claude Opus</span>
-                            </div>
-                            <div class="model-option" data-model="mistral">
-                                <span class="model-icon"><i class="fas fa-wind"></i></span>
-                                <span>Mistral</span>
-                            </div>
-                            <div class="model-option" data-model="felo">
-                                <span class="model-icon"><i class="fas fa-search"></i></span>
-                                <span>Felo</span>
-                            </div>
-                            <div class="model-option" data-model="turboseek">
-                                <span class="model-icon"><i class="fas fa-bolt"></i></span>
-                                <span>TurboSeek</span>
-                            </div>
-                        </div>
-                        <div class="model-group">
-                            <div class="model-group-label">Image Generation</div>
-                            <div class="model-option" data-model="image">
-                                <span class="model-icon"><i class="fas fa-image"></i></span>
-                                <span>AI Image Generator</span>
-                            </div>
-                        </div>
+                        <div class="model-option active" data-model="chatgpt"><i class="fas fa-comment-dots"></i><span class="model-name">ChatGPT</span></div>
+                        <div class="model-option" data-model="gemini"><i class="fas fa-brain"></i><span class="model-name">Gemini</span></div>
+                        <div class="model-option" data-model="copilot"><i class="fas fa-compass"></i><span class="model-name">Copilot</span></div>
+                        <div class="model-option" data-model="apertus"><i class="fas fa-globe"></i><span class="model-name">Apertus</span></div>
+                        <div class="model-option" data-model="claude-opus"><i class="fas fa-crown"></i><span class="model-name">Claude Opus</span></div>
+                        <div class="model-option" data-model="mistral"><i class="fas fa-wind"></i><span class="model-name">Mistral</span></div>
+                        <div class="model-option" data-model="felo"><i class="fas fa-search"></i><span class="model-name">Felo</span></div>
+                        <div class="model-option" data-model="turboseek"><i class="fas fa-bolt"></i><span class="model-name">TurboSeek</span></div>
+                        <div class="model-option" data-model="image"><i class="fas fa-image"></i><span class="model-name">AI Image Generator</span></div>
                     </div>
-                    <select id="modelSelect" class="hidden-select">
-                        <option value="chatgpt">ChatGPT</option>
-                        <option value="gemini">Gemini</option>
-                        <option value="copilot">Copilot</option>
-                        <option value="apertus">Apertus</option>
-                        <option value="claude-opus">Claude Opus</option>
-                        <option value="mistral">Mistral</option>
-                        <option value="felo">Felo</option>
-                        <option value="turboseek">TurboSeek</option>
-                        <option value="image">AI Image Generator</option>
-                    </select>
                 </div>
             </header>
 
-            <!-- Chat Container -->
             <div class="chat-container" id="chatContainer">
                 <!-- Welcome Screen -->
                 <div class="welcome-screen" id="welcomeScreen">
-                    <div class="welcome-icon">
-                        <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat Logo">
-                    </div>
-                    <h2>How can I help you today?</h2>
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI" class="welcome-logo">
+                    <h1>How can I help you today?</h1>
                     <p>Choose a model and start chatting</p>
-                    <div class="suggestion-cards">
-                        <div class="suggestion-card" data-prompt="Explain quantum entanglement in simple terms">
-                            <i class="fas fa-atom"></i>
-                            <span>Explain quantum entanglement</span>
-                        </div>
-                        <div class="suggestion-card" data-prompt="Write a Python function to sort a list">
-                            <i class="fas fa-code"></i>
-                            <span>Write code example</span>
-                        </div>
-                        <div class="suggestion-card" data-prompt="What are the best foods to try in Japan?">
-                            <i class="fas fa-utensils"></i>
-                            <span>Japanese food recommendations</span>
-                        </div>
-                        <div class="suggestion-card" data-prompt="Give me 3 startup ideas">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>Startup ideas</span>
-                        </div>
-                        <div class="suggestion-card" data-prompt="What is the meaning of life?">
-                            <i class="fas fa-question-circle"></i>
-                            <span>Philosophy question</span>
-                        </div>
-                        <div class="suggestion-card" data-prompt="a beautiful sunset over the ocean, digital art">
-                            <i class="fas fa-image"></i>
-                            <span>Generate an image</span>
-                        </div>
+                    <div class="suggestions-grid">
+                        <div class="suggestion-card" data-prompt="Explain quantum computing in simple terms"><i class="fas fa-lightbulb"></i><span>Explain quantum computing</span></div>
+                        <div class="suggestion-card" data-prompt="Write a Python function to sort a list"><i class="fas fa-code"></i><span>Write a Python function</span></div>
+                        <div class="suggestion-card" data-prompt="What are the benefits of meditation?"><i class="fas fa-heart"></i><span>Benefits of meditation</span></div>
+                        <div class="suggestion-card" data-prompt="Create a business plan for a coffee shop"><i class="fas fa-briefcase"></i><span>Business plan</span></div>
+                        <div class="suggestion-card" data-prompt="Write a poem about the ocean"><i class="fas fa-feather"></i><span>Poem about ocean</span></div>
+                        <div class="suggestion-card" data-prompt="Compare React vs Vue.js"><i class="fas fa-balance-scale"></i><span>React vs Vue.js</span></div>
                     </div>
                 </div>
 
-                <!-- Tool Interface (hidden by default) -->
-                <div class="tool-interface hidden" id="toolInterface">
-                    <div class="tool-header">
-                        <button class="back-to-chat" id="backToChat">
-                            <i class="fas fa-arrow-left"></i>
-                            <span>Back to Chat</span>
-                        </button>
-                        <h2 id="toolTitle">Tool</h2>
-                    </div>
-                    <div class="tool-content" id="toolContent">
-                        <!-- Tool content will be inserted here -->
-                    </div>
-                    <div class="tool-result" id="toolResult">
-                        <!-- Tool result will be inserted here -->
-                    </div>
-                </div>
+                <!-- Messages -->
+                <div class="messages-container" id="messagesContainer"></div>
+            </div>
 
-                <!-- Messages Container -->
-                <div class="messages-container hidden" id="messagesContainer">
-                    <!-- Messages will be inserted here -->
-                </div>
+            <!-- Recording Indicator -->
+            <div class="recording-indicator" id="recordingIndicator">
+                <div class="recording-dot"></div>
+                <span>Recording...</span>
+                <span id="recordingTimer">0:00</span>
+                <button onclick="cancelRecording()" class="rec-cancel"><i class="fas fa-times"></i></button>
             </div>
 
             <!-- Input Area -->
             <div class="input-area" id="inputArea">
-                <div class="input-container">
-                    <textarea 
-                        id="messageInput" 
-                        placeholder="Send a message..." 
-                        rows="1"
-                    ></textarea>
-                    <button class="send-btn" id="sendBtn" disabled>
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-                <div class="input-footer">
-                    <p>AI Chat Assistant &bull; Responses may be inaccurate</p>
+                <div class="attachment-preview" id="attachmentPreview" style="display:none"></div>
+                <div class="composer">
+                    <button class="composer-btn attach-btn" id="attachBtn" title="Attach file"><i class="fas fa-paperclip"></i></button>
+                    <input type="file" id="fileInput" style="display:none" accept="image/*,.pdf,.txt,.zip,.doc,.docx">
+                    <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                    <button class="composer-btn mic-btn" id="micBtn" title="Voice input"><i class="fas fa-microphone"></i></button>
+                    <button class="composer-btn send-btn" id="sendBtn" disabled title="Send"><i class="fas fa-paper-plane"></i></button>
+                    <button class="composer-btn stop-btn" id="stopBtn" style="display:none" title="Stop generation"><i class="fas fa-stop"></i></button>
                 </div>
             </div>
         </main>
     </div>
-
-    <!-- Tool Input Modal -->
-    <div class="modal" id="toolModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalToolTitle">Tool</h3>
-                <button class="modal-close" id="closeToolModal">&times;</button>
-            </div>
-            <div class="modal-body" id="modalToolBody">
-                <!-- Tool input form will be inserted here -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelToolModal">Cancel</button>
-                <button class="btn btn-primary" id="executeTool">
-                    <i class="fas fa-play"></i> Execute
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Result Modal -->
-    <div class="modal" id="resultModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h3 id="resultTitle">Result</h3>
-                <button class="modal-close" id="closeResultModal">&times;</button>
-            </div>
-            <div class="modal-body" id="resultBody">
-                <!-- Result will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Code Block Template -->
-    <template id="codeBlockTemplate">
-        <div class="code-block">
-            <div class="code-header">
-                <span class="language"></span>
-                <button class="copy-btn">
-                    <i class="fas fa-copy"></i>
-                    <span>Copy</span>
-                </button>
-            </div>
-            <pre><code></code></pre>
-        </div>
-    </template>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="js/api.js"></script>
