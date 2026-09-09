@@ -11,15 +11,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body class="payment-page">
-    <script>document.write('<style>body{display:none!important}</style>')</script>
     <script>
     (function() {
         var raw = localStorage.getItem('mazval_user');
-        if (!raw) { window.location.replace('login.html'); return; }
+        if (!raw) { window.location.href = 'login.html'; return; }
         try {
             var u = JSON.parse(raw);
-            if (u.status !== 'approved') { window.location.replace('login.html'); return; }
-        } catch(e) { window.location.replace('login.html'); }
+            if (u.status !== 'approved') { window.location.href = 'login.html'; return; }
+        } catch(e) { window.location.href = 'login.html'; }
     })();
     </script>
     <!-- Navbar -->
