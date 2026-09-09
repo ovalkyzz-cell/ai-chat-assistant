@@ -283,7 +283,18 @@
     </template>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="js/chat.js"></script>
     <script src="js/auth.js"></script>
+    <script>
+        // Route Guard: require auth + approved status
+        (function() {
+            var s = getSession();
+            if (!s) { window.location.href = 'login.html'; return; }
+            if (s.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+            if (s.status === 'rejected' || s.status === 'suspended') { window.location.href = 'account-status.html'; return; }
+            if (s.status !== 'approved') { window.location.href = 'login.html'; return; }
+            updateNavbarAuth();
+        })();
+    </script>
+    <script src="js/chat.js"></script>
 </body>
 </html>

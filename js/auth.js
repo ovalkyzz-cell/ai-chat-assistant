@@ -1,490 +1,521 @@
 /* ========================================
-   Authentication System
+   Mazval GPT AI - Complete Auth System
    ======================================== */
 
-// Admin Credentials (in production, use environment variables)
-const ADMIN_CREDENTIALS = {
-    accessKey: 'ADMIN@MAZZVALL2024',
-    email: 'admin@mazzvall.com',
-    password: 'Admin@Secure123!'
+const AUTH_CONFIG = {
+    adminCredentials: {
+        email: 'admin@mazzvall.com',
+        password: 'Admin@Secure123!',
+        accessKey: 'ADMIN@MAZZVALL2024'
+    },
+    storageKeys: {
+        users: 'mazval_users',
+        currentUser: 'mazval_currentUser',
+        sessions: 'mazval_sessions'
+    }
 };
 
-// Initialize Auth
-function initAuth() {
-    setupLoginForm();
-    setupRegisterForm();
-    setupAdminLoginForm();
-    setupGoogleAuth();
-    setupPasswordToggle();
-    setupPasswordStrength();
-    setupGuestLogin();
-    checkAuthStatus();
+/* ========================================
+   Session Management
+   ======================================== */
+function createSession(user) {
+    const session = {
+        id: generateSessionId(),
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        plan: user.plan || 'free',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    };
+    const sessions = getSessions();
+    sessions[session.id] = session;
+    localStorage.setItem(AUTH_CONFIG.storageKeys.sessions, JSON.stringify(sessions));
+    localStorage.setItem(AUTH_CONFIG.storageKeys.currentUser, JSON.stringify(session));
+    return session;
 }
 
-// ========================================
-// Login Form
-// ========================================
-function setupLoginForm() {
-    const form = document.getElementById('loginForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const rememberMe = document.getElementById('rememberMe')?.checked;
-
-        if (!email || !password) {
-            showToast('Please fill in all fields', 'error');
-            return;
+function getSession() {
+    try {
+        const raw = localStorage.getItem(AUTH_CONFIG.storageKeys.currentUser);
+        if (!raw) return null;
+        const session = JSON.parse(raw);
+        if (new Date(session.expiresAt) < new Date()) {
+            destroySession();
+            return null;
         }
-
-        // Check admin credentials
-        if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-            const adminUser = {
-                id: 'admin',
-                name: 'Admin',
-                email: ADMIN_CREDENTIALS.email,
-                role: 'admin',
-                status: 'active',
-                createdAt: new Date().toISOString()
-            };
-            
-            localStorage.setItem('currentUser', JSON.stringify(adminUser));
-            showToast('Welcome back, Admin!', 'success');
-            
-            setTimeout(() => {
-                window.location.href = 'admin.html';
-            }, 1000);
-            return;
+        const users = getUsers();
+        const user = users.find(u => u.id === session.userId);
+        if (!user) { destroySession(); return null; }
+        if (user.status === 'rejected' || user.status === 'suspended') {
+            destroySession();
+            return null;
         }
-
-        // Check regular users
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.email === email && u.password === password);
-
-        if (!user) {
-            showToast('Invalid email or password', 'error');
-            return;
-        }
-
-        if (user.status === 'banned') {
-            showToast('Your account has been banned. Please contact admin.', 'error');
-            return;
-        }
-
-        if (user.status === 'pending') {
-            showToast('Your account is pending admin approval. Please wait before logging in.', 'warning');
-            return;
-        }
-
-        if (user.status !== 'active') {
-            showToast('Your account is not active. Please contact admin.', 'error');
-            return;
-        }
-
-        // Update last login
-        user.lastLogin = new Date().toISOString();
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        // Set current user
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        
-        showToast('Login successful!', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
-    });
+        session.status = user.status;
+        session.role = user.role;
+        session.plan = user.plan || 'free';
+        return session;
+    } catch { return null; }
 }
 
-// ========================================
-// Register Form
-// ========================================
-function setupRegisterForm() {
-    const form = document.getElementById('registerForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const fullName = document.getElementById('fullName').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        const agreeTerms = document.getElementById('agreeTerms').checked;
-
-        // Validation
-        if (!fullName || !email || !password || !confirmPassword) {
-            showToast('Please fill in all fields', 'error');
-            return;
-        }
-
-        if (!isValidEmail(email)) {
-            showToast('Please enter a valid email', 'error');
-            return;
-        }
-
-        if (password.length < 8) {
-            showToast('Password must be at least 8 characters', 'error');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            showToast('Passwords do not match', 'error');
-            return;
-        }
-
-        if (!agreeTerms) {
-            showToast('Please agree to the terms', 'error');
-            return;
-        }
-
-        // Check if user already exists
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        if (users.find(u => u.email === email)) {
-            showToast('Email already registered', 'error');
-            return;
-        }
-
-        // Create new user
-        const newUser = {
-            id: generateUserId(),
-            name: fullName,
-            email: email,
-            password: password, // In production, hash this!
-            role: 'user',
-            status: 'pending', // Requires admin approval
-            plan: 'free',
-            createdAt: new Date().toISOString(),
-            lastLogin: null
-        };
-
-        users.push(newUser);
-        localStorage.setItem('users', JSON.stringify(users));
-
-        showToast('Registration successful! Please wait for admin approval before logging in.', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 2000);
-    });
+function destroySession() {
+    localStorage.removeItem(AUTH_CONFIG.storageKeys.currentUser);
 }
 
-// ========================================
-// Admin Login Form
-// ========================================
-function setupAdminLoginForm() {
-    const form = document.getElementById('adminLoginForm');
-    if (!form) return;
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const accessKey = document.getElementById('adminKey').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-
-        // Validate access key
-        if (accessKey !== ADMIN_CREDENTIALS.accessKey) {
-            showToast('Invalid admin access key', 'error');
-            return;
-        }
-
-        // Validate credentials
-        if (email !== ADMIN_CREDENTIALS.email || password !== ADMIN_CREDENTIALS.password) {
-            showToast('Invalid credentials', 'error');
-            return;
-        }
-
-        // Create admin session
-        const adminUser = {
-            id: 'admin',
-            name: 'Admin',
-            email: ADMIN_CREDENTIALS.email,
-            role: 'admin',
-            status: 'active',
-            createdAt: new Date().toISOString()
-        };
-
-        localStorage.setItem('currentUser', JSON.stringify(adminUser));
-        
-        // Log admin activity
-        logAdminActivity('login', 'Admin logged in');
-        
-        showToast('Welcome to Admin Dashboard!', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'admin.html';
-        }, 1000);
-    });
+function getSessions() {
+    try { return JSON.parse(localStorage.getItem(AUTH_CONFIG.storageKeys.sessions) || '{}'); }
+    catch { return {}; }
 }
 
-// ========================================
-// Google Authentication (Mock)
-// ========================================
-function setupGoogleAuth() {
-    const googleLogin = document.getElementById('googleLogin');
-    const googleRegister = document.getElementById('googleRegister');
+function isLoggedIn() { return getSession() !== null; }
 
-    if (googleLogin) {
-        googleLogin.addEventListener('click', () => handleGoogleAuth('login'));
+function isAdmin() {
+    const s = getSession();
+    return s && s.role === 'admin' && s.status === 'approved';
+}
+
+function isApproved() {
+    const s = getSession();
+    return s && s.status === 'approved';
+}
+
+function isPending() {
+    const s = getSession();
+    return s && s.status === 'pending';
+}
+
+function generateSessionId() {
+    return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 12);
+}
+
+function generateUserId() {
+    return 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 12);
+}
+
+/* ========================================
+   User Database (localStorage)
+   ======================================== */
+function getUsers() {
+    try { return JSON.parse(localStorage.getItem(AUTH_CONFIG.storageKeys.users) || '[]'); }
+    catch { return []; }
+}
+
+function saveUsers(users) {
+    localStorage.setItem(AUTH_CONFIG.storageKeys.users, JSON.stringify(users));
+}
+
+function findUserByEmail(email) {
+    return getUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+function findUserById(id) {
+    return getUsers().find(u => u.id === id);
+}
+
+function isAdminEmail(email) {
+    return email.toLowerCase() === AUTH_CONFIG.adminCredentials.email.toLowerCase();
+}
+
+/* ========================================
+   Register
+   ======================================== */
+function handleRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('fullName')?.value.trim();
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
+    const confirmPassword = document.getElementById('confirmPassword')?.value;
+    const agreeTerms = document.getElementById('agreeTerms')?.checked;
+
+    if (!name || !email || !password || !confirmPassword) {
+        showToast('Please fill in all fields', 'error'); return false;
+    }
+    if (!isValidEmail(email)) {
+        showToast('Please enter a valid email', 'error'); return false;
+    }
+    if (isAdminEmail(email)) {
+        showToast('This email is reserved for admin', 'error'); return false;
+    }
+    if (password.length < 8) {
+        showToast('Password must be at least 8 characters', 'error'); return false;
+    }
+    if (password !== confirmPassword) {
+        showToast('Passwords do not match', 'error'); return false;
+    }
+    if (!agreeTerms) {
+        showToast('Please agree to the terms', 'error'); return false;
     }
 
-    if (googleRegister) {
-        googleRegister.addEventListener('click', () => handleGoogleAuth('register'));
+    const users = getUsers();
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+        showToast('Email already registered', 'error'); return false;
     }
-}
 
-function handleGoogleAuth(type) {
-    // Mock Google authentication
-    // In production, integrate with Google OAuth
-    
-    const mockGoogleUser = {
-        id: 'google_' + generateUserId(),
-        name: 'Google User',
-        email: 'user@gmail.com',
-        avatar: null,
-        provider: 'google',
+    const newUser = {
+        id: generateUserId(),
+        name: name,
+        email: email,
+        password: simpleHash(password),
         role: 'user',
-        status: 'pending', // Requires admin approval
+        status: 'pending',
         plan: 'free',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         lastLogin: null
     };
 
-    // Check if user exists
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const existingUser = users.find(u => u.email === mockGoogleUser.email);
+    users.push(newUser);
+    saveUsers(users);
 
-    if (existingUser) {
-        // Login existing user
-        if (existingUser.status === 'banned') {
-            showToast('Your account has been banned. Please contact admin.', 'error');
-            return;
-        }
+    showToast('Registration successful! Waiting for admin approval.', 'success');
+    setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+    return false;
+}
 
-        if (existingUser.status === 'pending') {
-            showToast('Your account is pending admin approval. Please wait before logging in.', 'warning');
-            return;
-        }
+/* ========================================
+   Login
+   ======================================== */
+function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
 
-        if (existingUser.status !== 'active') {
-            showToast('Your account is not active. Please contact admin.', 'error');
-            return;
-        }
+    if (!email || !password) {
+        showToast('Please fill in all fields', 'error'); return false;
+    }
 
-        existingUser.lastLogin = new Date().toISOString();
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', JSON.stringify(existingUser));
-        
-        showToast('Welcome back!', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
-    } else {
-        // Register new user - requires admin approval
-        users.push(mockGoogleUser);
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        showToast('Google account registered! Please wait for admin approval before logging in.', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 2000);
+    // Admin login
+    if (email === AUTH_CONFIG.adminCredentials.email && password === AUTH_CONFIG.adminCredentials.password) {
+        const adminUser = {
+            id: 'admin_001',
+            name: 'Admin',
+            email: AUTH_CONFIG.adminCredentials.email,
+            role: 'admin',
+            status: 'approved',
+            plan: 'premium'
+        };
+        const session = createSession(adminUser);
+        logActivity('admin_login', 'Admin logged in');
+        showToast('Welcome back, Admin!', 'success');
+        setTimeout(() => { window.location.href = 'admin.html'; }, 800);
+        return false;
+    }
+
+    // Regular user login
+    const users = getUsers();
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+        showToast('Email or password is incorrect', 'error'); return false;
+    }
+
+    if (!verifyPassword(password, user.password)) {
+        showToast('Email or password is incorrect', 'error'); return false;
+    }
+
+    if (user.status === 'pending') {
+        showToast('Your account is pending admin approval', 'warning');
+        setTimeout(() => { window.location.href = 'waiting-approval.html'; }, 1000);
+        return false;
+    }
+
+    if (user.status === 'rejected') {
+        showToast('Your account has been rejected. Please contact admin.', 'error');
+        return false;
+    }
+
+    if (user.status === 'suspended') {
+        showToast('Your account has been suspended. Please contact admin.', 'error');
+        return false;
+    }
+
+    if (user.status !== 'approved') {
+        showToast('Account status error. Please contact admin.', 'error');
+        return false;
+    }
+
+    user.lastLogin = new Date().toISOString();
+    user.updatedAt = new Date().toISOString();
+    saveUsers(users);
+
+    const session = createSession(user);
+    logActivity('user_login', `User ${user.email} logged in`);
+    showToast('Login successful!', 'success');
+    setTimeout(() => { window.location.href = 'index.html'; }, 800);
+    return false;
+}
+
+/* ========================================
+   Route Guards
+   ======================================== */
+function requireAuth() {
+    if (!isLoggedIn()) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+function requireApproval() {
+    const s = getSession();
+    if (!s) { window.location.href = 'login.html'; return false; }
+    if (s.status === 'pending') { window.location.href = 'waiting-approval.html'; return false; }
+    if (s.status === 'rejected' || s.status === 'suspended') { window.location.href = 'account-status.html'; return false; }
+    return true;
+}
+
+function requireAdmin() {
+    const s = getSession();
+    if (!s) { window.location.href = 'admin-login.html'; return false; }
+    if (s.role !== 'admin' || s.status !== 'approved') {
+        showToast('Access denied. Admin only.', 'error');
+        window.location.href = 'login.html'; return false;
+    }
+    return true;
+}
+
+function requireGuest() {
+    if (isLoggedIn()) {
+        const s = getSession();
+        if (s.role === 'admin') { window.location.href = 'admin.html'; return false; }
+        window.location.href = 'index.html'; return false;
+    }
+    return true;
+}
+
+/* ========================================
+   Auth Status Page Logic
+   ======================================== */
+function initWaitingApproval() {
+    const s = getSession();
+    if (!s) { window.location.href = 'login.html'; return; }
+    if (s.status === 'approved') { window.location.href = 'index.html'; return; }
+    if (s.status === 'rejected' || s.status === 'suspended') { window.location.href = 'account-status.html'; return; }
+    const el = document.getElementById('waitingUserEmail');
+    if (el) el.textContent = s.email;
+}
+
+function initAccountStatus() {
+    const s = getSession();
+    if (!s) { window.location.href = 'login.html'; return; }
+    if (s.status === 'approved') { window.location.href = 'index.html'; return; }
+    if (s.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+    const el = document.getElementById('statusUserEmail');
+    const st = document.getElementById('statusText');
+    if (el) el.textContent = s.email;
+    if (st) {
+        const labels = { rejected: 'Rejected', suspended: 'Suspended' };
+        st.textContent = labels[s.status] || 'Unknown';
+        st.className = 'status-value ' + s.status;
     }
 }
 
-// ========================================
-// Guest Login
-// ========================================
-function setupGuestLogin() {
-    const guestBtn = document.getElementById('guestLogin');
-    if (!guestBtn) return;
+/* ========================================
+   Admin Login
+   ======================================== */
+function handleAdminLogin(e) {
+    e.preventDefault();
+    const accessKey = document.getElementById('adminKey')?.value.trim();
+    const email = document.getElementById('email')?.value.trim();
+    const password = document.getElementById('password')?.value;
 
-    guestBtn.addEventListener('click', () => {
-        const guestUser = {
-            id: 'guest_' + generateUserId(),
-            name: 'Guest User',
-            email: 'guest@example.com',
-            role: 'guest',
-            status: 'active',
-            createdAt: new Date().toISOString()
-        };
+    if (accessKey !== AUTH_CONFIG.adminCredentials.accessKey) {
+        showToast('Invalid access key', 'error'); return false;
+    }
+    if (email !== AUTH_CONFIG.adminCredentials.email || password !== AUTH_CONFIG.adminCredentials.password) {
+        showToast('Invalid credentials', 'error'); return false;
+    }
 
-        localStorage.setItem('currentUser', JSON.stringify(guestUser));
-        showToast('Continuing as guest', 'success');
-        
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
-    });
+    const adminUser = {
+        id: 'admin_001',
+        name: 'Admin',
+        email: AUTH_CONFIG.adminCredentials.email,
+        role: 'admin',
+        status: 'approved',
+        plan: 'premium'
+    };
+    createSession(adminUser);
+    logActivity('admin_login', 'Admin logged in via admin portal');
+    showToast('Welcome to Admin Dashboard!', 'success');
+    setTimeout(() => { window.location.href = 'admin.html'; }, 800);
+    return false;
 }
 
-// ========================================
-// Password Toggle
-// ========================================
+/* ========================================
+   Guest Login
+   ======================================== */
+function handleGuestLogin() {
+    const guestUser = {
+        id: 'guest_' + Date.now(),
+        name: 'Guest User',
+        email: 'guest_' + Date.now() + '@guest.local',
+        role: 'guest',
+        status: 'approved',
+        plan: 'free'
+    };
+    createSession(guestUser);
+    showToast('Continuing as guest', 'success');
+    setTimeout(() => { window.location.href = 'index.html'; }, 800);
+}
+
+/* ========================================
+   Logout
+   ======================================== */
+function handleLogout() {
+    destroySession();
+    showToast('Logged out successfully', 'success');
+    setTimeout(() => { window.location.href = 'login.html'; }, 500);
+}
+
+/* ========================================
+   Password Utilities (simple hash for demo)
+   ======================================== */
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return 'h_' + Math.abs(hash).toString(36) + '_' + str.length;
+}
+
+function verifyPassword(input, hash) {
+    return simpleHash(input) === hash;
+}
+
+/* ========================================
+   Validation Utilities
+   ======================================== */
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/* ========================================
+   Toast Notifications
+   ======================================== */
+function showToast(message, type = 'info') {
+    const existing = document.querySelectorAll('.toast');
+    existing.forEach(t => t.remove());
+
+    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.classList.add('show'); }, 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+/* ========================================
+   Activity Logger
+   ======================================== */
+function logActivity(action, details) {
+    const logs = JSON.parse(localStorage.getItem('mazval_activity_logs') || '[]');
+    logs.unshift({ action, details, timestamp: new Date().toISOString() });
+    localStorage.setItem('mazval_activity_logs', JSON.stringify(logs.slice(0, 200)));
+}
+
+/* ========================================
+   Page Init Helpers
+   ======================================== */
+function setupLoginForm() {
+    const form = document.getElementById('loginForm');
+    if (form) form.addEventListener('submit', handleLogin);
+}
+
+function setupRegisterForm() {
+    const form = document.getElementById('registerForm');
+    if (form) form.addEventListener('submit', handleRegister);
+}
+
+function setupAdminLoginForm() {
+    const form = document.getElementById('adminLoginForm');
+    if (form) form.addEventListener('submit', handleAdminLogin);
+}
+
 function setupPasswordToggle() {
     document.querySelectorAll('.toggle-password').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const input = btn.parentElement.querySelector('input');
             const icon = btn.querySelector('i');
-            
             if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
         });
     });
 }
 
-// ========================================
-// Password Strength Indicator
-// ========================================
 function setupPasswordStrength() {
-    const passwordInput = document.getElementById('password');
-    const strengthIndicator = document.getElementById('passwordStrength');
-    
-    if (!passwordInput || !strengthIndicator) return;
-
-    passwordInput.addEventListener('input', (e) => {
-        const password = e.target.value;
-        const strength = calculatePasswordStrength(password);
-        
-        strengthIndicator.className = 'password-strength';
-        
-        if (password.length === 0) {
-            strengthIndicator.querySelector('.strength-bar').style.width = '0';
-            strengthIndicator.querySelector('.strength-text').textContent = '';
-            return;
-        }
-
-        if (strength < 3) {
-            strengthIndicator.classList.add('weak');
-            strengthIndicator.querySelector('.strength-text').textContent = 'Weak';
-        } else if (strength < 5) {
-            strengthIndicator.classList.add('medium');
-            strengthIndicator.querySelector('.strength-text').textContent = 'Medium';
-        } else {
-            strengthIndicator.classList.add('strong');
-            strengthIndicator.querySelector('.strength-text').textContent = 'Strong';
-        }
+    const pw = document.getElementById('password');
+    const ind = document.getElementById('passwordStrength');
+    if (!pw || !ind) return;
+    pw.addEventListener('input', (e) => {
+        const v = e.target.value;
+        let s = 0;
+        if (v.length >= 8) s++;
+        if (v.length >= 12) s++;
+        if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+        if (/\d/.test(v)) s++;
+        if (/[^a-zA-Z0-9]/.test(v)) s++;
+        ind.className = 'password-strength';
+        if (v.length === 0) { ind.querySelector('.strength-bar').style.width = '0'; return; }
+        if (s < 3) { ind.classList.add('weak'); ind.querySelector('.strength-text').textContent = 'Weak'; }
+        else if (s < 5) { ind.classList.add('medium'); ind.querySelector('.strength-text').textContent = 'Medium'; }
+        else { ind.classList.add('strong'); ind.querySelector('.strength-text').textContent = 'Strong'; }
     });
 }
 
-function calculatePasswordStrength(password) {
-    let strength = 0;
-    
-    if (password.length >= 8) strength++;
-    if (password.length >= 12) strength++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-    
-    return strength;
+function setupGuestLoginButton() {
+    const btn = document.getElementById('guestLogin');
+    if (btn) btn.addEventListener('click', handleGuestLogin);
 }
 
-// ========================================
-// Check Auth Status
-// ========================================
-function checkAuthStatus() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const isAuthPage = window.location.pathname.includes('login.html') || 
-                       window.location.pathname.includes('register.html') ||
-                       window.location.pathname.includes('admin-login.html');
-    const isAdminPage = window.location.pathname.includes('admin.html');
+function setupLogoutButton() {
+    const btn = document.getElementById('logoutBtn');
+    if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); handleLogout(); });
+}
 
-    // Redirect based on auth status
-    if (!currentUser && !isAuthPage && !isAdminPage) {
-        // Allow access to main page for guests
-        if (!window.location.pathname.includes('index.html')) {
-            // window.location.href = 'login.html';
-        }
+function updateNavbarAuth() {
+    const s = getSession();
+    document.querySelectorAll('.auth-only').forEach(el => el.style.display = s ? '' : 'none');
+    document.querySelectorAll('.guest-only').forEach(el => el.style.display = s ? 'none' : '');
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = (s && s.role === 'admin') ? '' : 'none');
+    document.querySelectorAll('.approved-only').forEach(el => el.style.display = (s && s.status === 'approved') ? '' : 'none');
+    const nameEl = document.getElementById('userName');
+    if (nameEl && s) nameEl.textContent = s.name || s.email.split('@')[0];
+}
+
+/* ========================================
+   Initialize Auth on DOM Ready
+   ======================================== */
+function initAuthPage() {
+    const path = window.location.pathname;
+    const page = path.split('/').pop() || 'index.html';
+
+    setupPasswordToggle();
+    setupPasswordStrength();
+    setupPasswordToggle();
+    setupLogoutButton();
+    updateNavbarAuth();
+
+    if (page === 'login.html' || page === 'login' || page === '') {
+        if (page === '' && !path.includes('login')) return;
+        setupLoginForm();
+        setupGuestLoginButton();
     }
-
-    // Check admin access
-    if (isAdminPage && (!currentUser || currentUser.role !== 'admin')) {
-        window.location.href = 'admin-login.html';
-    }
+    if (page === 'register.html' || page === 'register') setupRegisterForm();
+    if (page === 'admin-login.html' || page === 'admin-login') setupAdminLoginForm();
+    if (page === 'waiting-approval.html' || page === 'waiting-approval') initWaitingApproval();
+    if (page === 'account-status.html' || page === 'account-status') initAccountStatus();
 }
 
-// ========================================
-// Utility Functions
-// ========================================
-function isValidEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuthPage);
+} else {
+    initAuthPage();
 }
-
-function generateUserId() {
-    return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
-
-function logAdminActivity(action, details) {
-    const activities = JSON.parse(localStorage.getItem('adminActivities') || '[]');
-    activities.unshift({
-        action,
-        details,
-        timestamp: new Date().toISOString()
-    });
-    localStorage.setItem('adminActivities', JSON.stringify(activities.slice(0, 100)));
-}
-
-// ========================================
-// Toast Notifications
-// ========================================
-function showToast(message, type = 'info') {
-    // Remove existing toasts
-    const existingToasts = document.querySelectorAll('.toast');
-    existingToasts.forEach(toast => toast.remove());
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        warning: 'fa-exclamation-circle',
-        info: 'fa-info-circle'
-    };
-
-    toast.innerHTML = `
-        <i class="fas ${icons[type] || icons.info}"></i>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-
-    // Add to container or create one
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    container.appendChild(toast);
-
-    // Close button
-    toast.querySelector('.toast-close').addEventListener('click', () => {
-        toast.remove();
-    });
-
-    // Auto remove
-    setTimeout(() => {
-        toast.style.animation = 'toastSlide 0.3s ease reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-// Initialize on DOM load
-document.addEventListener('DOMContentLoaded', initAuth);

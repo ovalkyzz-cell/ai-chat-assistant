@@ -434,6 +434,17 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="js/auth.js"></script>
+    <script>
+        // Route Guard: require admin
+        (function() {
+            var s = getSession();
+            if (!s) { window.location.href = 'admin-login.html'; return; }
+            if (s.role !== 'admin' || s.status !== 'approved') {
+                window.location.href = 'login.html'; return;
+            }
+        })();
+    </script>
     <script src="js/admin.js"></script>
 </body>
 </html>

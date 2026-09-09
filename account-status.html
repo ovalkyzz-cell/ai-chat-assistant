@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Status - Mazval GPT AI</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
+    <link rel="stylesheet" href="css/auth.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo">
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="Mazval GPT AI" class="auth-logo">
+                </div>
+                <h1>Account Status</h1>
+                <p>Your account cannot be accessed at this time</p>
+            </div>
+
+            <div class="waiting-content">
+                <div class="waiting-icon error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="waiting-info">
+                    <p class="waiting-email" id="statusUserEmail"></p>
+                    <p class="status-label">Account Status:</p>
+                    <p class="status-value" id="statusText">Unknown</p>
+                    <p class="waiting-message">
+                        Your account is not currently active. This may be because your account was
+                        rejected or suspended by an administrator. Please contact support for assistance.
+                    </p>
+                </div>
+            </div>
+
+            <div class="auth-footer">
+                <a href="login.html" class="auth-btn secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

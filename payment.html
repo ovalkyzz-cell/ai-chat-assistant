@@ -266,6 +266,16 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="js/auth.js"></script>
+    <script>
+        // Route Guard: require auth + approved
+        (function() {
+            var s = getSession();
+            if (!s) { window.location.href = 'login.html'; return; }
+            if (s.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+            if (s.status === 'rejected' || s.status === 'suspended') { window.location.href = 'account-status.html'; return; }
+        })();
+    </script>
     <script src="js/payment.js"></script>
 </body>
 </html>

@@ -546,6 +546,138 @@ input {
 }
 
 /* ========================================
+   Waiting Approval & Account Status
+   ======================================== */
+.waiting-content {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.waiting-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    animation: pulse 2s infinite;
+}
+
+.waiting-icon i {
+    font-size: 2rem;
+    color: var(--warning);
+}
+
+.waiting-icon.error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+}
+
+.waiting-icon.error i {
+    color: var(--danger);
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.waiting-email {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    margin-bottom: 12px;
+}
+
+.waiting-message {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 12px 0;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.waiting-steps {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.step.completed i {
+    color: var(--success);
+}
+
+.step.active i {
+    color: var(--warning);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.status-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.status-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.status-value.rejected { color: var(--danger); }
+.status-value.suspended { color: var(--warning); }
+
+.auth-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-top: 12px;
+    transition: color var(--transition-fast);
+}
+
+.auth-link:hover {
+    color: var(--accent-primary);
+}
+
+.admin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    margin-top: 12px;
+    transition: color var(--transition-fast);
+}
+
+.admin-link:hover {
+    color: var(--text-primary);
+}
+
+/* ========================================
    Responsive
    ======================================== */
 @media (max-width: 480px) {
@@ -561,5 +693,10 @@ input {
         flex-direction: column;
         gap: 12px;
         align-items: flex-start;
+    }
+
+    .waiting-steps {
+        flex-direction: column;
+        align-items: center;
     }
 }
