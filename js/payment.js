@@ -452,9 +452,9 @@ function handlePaymentSuccess(paymentData) {
     };
 
     // Save user
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const users = JSON.parse(localStorage.getItem('mazval_users') || '[]');
     users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('mazval_users', JSON.stringify(users));
 
     // Save transaction
     const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
