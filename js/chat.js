@@ -64,6 +64,10 @@ const PRICING_PLANS = {
 function getCurrentUserPlan() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) return 'free';
+    
+    // Admin has full access
+    if (currentUser.role === 'admin') return 'premium';
+    
     return currentUser.plan || 'free';
 }
 
@@ -614,7 +618,7 @@ async function getAIResponse(query) {
         if (data.image) {
             return { text: `Generated image for: "${query}"`, isImage: true, imageUrl: data.image };
         }
-        return { text: JSON.stringify(data, null, 2), isImage: false };
+        return { text: 'Failed to generate image', isImage: false };
     } else {
         url = `${endpoint}?text=${encodeURIComponent(query)}`;
     }
@@ -627,15 +631,48 @@ async function getAIResponse(query) {
 
     const data = await response.json();
     
-    // Handle different response formats
+    // Extract natural text from API response
     let text = '';
-    if (data.response) text = data.response;
-    else if (data.answer) text = data.answer;
-    else if (data.text) text = data.text;
-    else if (data.message) text = data.message;
-    else if (data.content) text = data.content;
-    else if (typeof data === 'string') text = data;
-    else text = JSON.stringify(data, null, 2);
+    
+    // Try to get the most natural response text
+    if (data.response && typeof data.response === 'string') {
+        text = data.response;
+    } else if (data.answer && typeof data.answer === 'string') {
+        text = data.answer;
+    } else if (data.text && typeof data.text === 'string') {
+        text = data.text;
+    } else if (data.message && typeof data.message === 'string') {
+        text = data.message;
+    } else if (data.content && typeof data.content === 'string') {
+        text = data.content;
+    } else if (data.result && typeof data.result === 'string') {
+        text = data.result;
+    } else if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+        // Handle OpenAI-style responses
+        text = data.choices[0].message?.content || data.choices[0].text || '';
+    } else if (data.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
+        // Handle Gemini-style responses
+        text = data.candidates[0].content?.parts?.[0]?.text || '';
+    } else if (typeof data === 'string') {
+        text = data;
+    } else if (typeof data === 'object') {
+        // If it's an object, try to find the first string value that looks like a response
+        const stringValues = Object.values(data).filter(v => typeof v === 'string' && v.length > 5);
+        if (stringValues.length > 0) {
+            text = stringValues[0];
+        } else {
+            // Last resort: try to extract any meaningful text
+            text = 'I received your message but couldn\'t generate a proper response. Please try again.';
+        }
+    }
+    
+    // Clean up the response text
+    text = text.trim();
+    
+    // If text is still empty or looks like JSON, provide a fallback
+    if (!text || text.startsWith('{') || text.startsWith('[')) {
+        text = 'I received your message. How can I help you further?';
+    }
     
     return { text, isImage: false };
 }
@@ -1133,9 +1170,52 @@ function displayToolResult(data, title) {
             `;
         }
     }
-    // Default: show JSON
+    // Check for phone info
+    else if (data.nomor || data.number || data.phone) {
+        const phoneInfo = data;
+        contentHTML = `
+            <div class="info-card">
+                <div class="info-row"><span class="info-label">Nomor:</span> <span class="info-value">${phoneInfo.nomor || phoneInfo.number || phoneInfo.phone || '-'}</span></div>
+                <div class="info-row"><span class="info-label">Operator:</span> <span class="info-value">${phoneInfo.operator || phoneInfo.carrier || '-'}</span></div>
+                <div class="info-row"><span class="info-label">Negara:</span> <span class="info-value">${phoneInfo.country || phoneInfo.negara || '-'}</span></div>
+                <div class="info-row"><span class="info-label">Status:</span> <span class="info-value">${phoneInfo.status || 'Valid'}</span></div>
+            </div>
+        `;
+    }
+    // Check for translation result
+    else if (data.translation || data.translated || data.result) {
+        const translatedText = data.translation || data.translated || data.result;
+        contentHTML = `
+            <div class="translation-result">
+                <p style="font-size: 1.1rem; line-height: 1.6;">${translatedText}</p>
+            </div>
+        `;
+    }
+    // Check for screenshot URL
+    else if (data.screenshot || data.image || data.result?.url) {
+        const imgUrl = data.screenshot || data.image || data.result?.url;
+        contentHTML = `
+            <div class="media-preview">
+                <img src="${imgUrl}" alt="Screenshot" onerror="this.parentElement.innerHTML='<p>Failed to load screenshot</p>'">
+            </div>
+        `;
+    }
+    // Default: show user-friendly message instead of raw JSON
     else {
-        contentHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        // Try to find any meaningful text in the data
+        let friendlyText = '';
+        if (typeof data === 'object') {
+            const values = Object.values(data).filter(v => typeof v === 'string' && v.length > 3);
+            if (values.length > 0) {
+                friendlyText = values.join('\n');
+            }
+        }
+        
+        if (friendlyText) {
+            contentHTML = `<p style="white-space: pre-wrap;">${escapeHtml(friendlyText)}</p>`;
+        } else {
+            contentHTML = `<p>Data received successfully. Check the result below.</p>`;
+        }
     }
     
     elements.toolResult.innerHTML = `
@@ -1352,22 +1432,28 @@ function displayDownloaderResult(data, downloaderName) {
             `;
         }).join('');
     }
-    // Default: show data as JSON with download links
+    // Default: show user-friendly message with download link
     else {
         // Try to find any URL in the data
         const jsonStr = JSON.stringify(data, null, 2);
         const urlMatches = jsonStr.match(/https?:\/\/[^\s"']+/g);
         
         if (urlMatches && urlMatches.length > 0) {
-            contentHTML = urlMatches.map(url => `
-                <div style="margin-bottom: 12px;">
-                    <a href="${url}" target="_blank" class="download-btn">
-                        <i class="fas fa-download"></i> Download
-                    </a>
-                </div>
-            `).join('');
+            contentHTML = `
+                <p style="margin-bottom: 16px; color: var(--text-primary);">Download ready! Click the button below:</p>
+                ${urlMatches.map((url, index) => `
+                    <div style="margin-bottom: 12px;">
+                        <a href="${url}" target="_blank" class="download-btn">
+                            <i class="fas fa-download"></i> Download ${urlMatches.length > 1 ? `Option ${index + 1}` : ''}
+                        </a>
+                    </div>
+                `).join('')}
+            `;
         } else {
-            contentHTML = `<pre>${jsonStr}</pre>`;
+            contentHTML = `
+                <p style="color: var(--text-primary);">Content processed successfully.</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">If no download appeared, the URL might be invalid or unsupported.</p>
+            `;
         }
     }
     

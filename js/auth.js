@@ -150,7 +150,8 @@ function setupRegisterForm() {
             email: email,
             password: password, // In production, hash this!
             role: 'user',
-            status: 'pending', // Requires admin approval
+            status: 'active', // Active immediately
+            plan: 'free', // Free plan by default
             createdAt: new Date().toISOString(),
             lastLogin: null
         };
@@ -158,11 +159,14 @@ function setupRegisterForm() {
         users.push(newUser);
         localStorage.setItem('users', JSON.stringify(users));
 
-        showToast('Registration successful! Please wait for admin approval.', 'success');
+        // Auto login after registration
+        localStorage.setItem('currentUser', JSON.stringify(newUser));
+
+        showToast('Registration successful! Welcome!', 'success');
         
         setTimeout(() => {
-            window.location.href = 'login.html';
-        }, 2000);
+            window.location.href = 'index.html';
+        }, 1000);
     });
 }
 
