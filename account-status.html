@@ -34,18 +34,20 @@
         </div>
     </div>
 
+    <style>body{opacity:0}</style>
     <script>
     (function() {
         var raw = localStorage.getItem('mazval_user');
-        if (!raw) { window.location.href = 'login.html'; return; }
+        if (!raw) { window.location.replace('login.html'); return; }
         try {
             var u = JSON.parse(raw);
-            if (u.status === 'approved') { window.location.href = 'index.html'; return; }
-            if (u.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+            if (u.status === 'approved') { window.location.replace('index.html'); return; }
+            if (u.status === 'pending') { window.location.replace('waiting-approval.html'); return; }
             document.getElementById('userEmail').textContent = u.email;
             document.getElementById('statusText').textContent = u.status.toUpperCase();
             document.getElementById('statusText').className = 'status-value ' + u.status;
-        } catch(e) { window.location.href = 'login.html'; }
+            document.body.style.opacity = '1';
+        } catch(e) { window.location.replace('login.html'); }
     })();
     </script>
 </body>
