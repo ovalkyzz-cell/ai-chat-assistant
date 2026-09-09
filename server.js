@@ -22,19 +22,38 @@ app.use((req, res, next) => {
 });
 
 // ========================================
-// DATABASE (JSON File-based)
+// DATABASE (In-memory with file fallback)
 // ========================================
 const DB_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
+// In-memory database for serverless
+const inMemoryDB = {};
+
 function readDB(name) {
+    if (inMemoryDB[name]) return inMemoryDB[name];
+    
     const file = path.join(DB_DIR, `${name}.json`);
-    if (!fs.existsSync(file)) return [];
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!fs.existsSync(file)) {
+        inMemoryDB[name] = [];
+        return inMemoryDB[name];
+    }
+    
+    try {
+        inMemoryDB[name] = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+        inMemoryDB[name] = [];
+    }
+    return inMemoryDB[name];
 }
 
 function writeDB(name, data) {
-    fs.writeFileSync(path.join(DB_DIR, `${name}.json`), JSON.stringify(data, null, 2));
+    inMemoryDB[name] = data;
+    try {
+        fs.writeFileSync(path.join(DB_DIR, `${name}.json`), JSON.stringify(data, null, 2));
+    } catch (e) {
+        // Ignore write errors in serverless
+    }
 }
 
 function generateId() {
