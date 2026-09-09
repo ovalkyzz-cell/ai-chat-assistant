@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="css/auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+    (function() {
+        var raw = localStorage.getItem('mazval_user');
+        if (!raw) { window.location.href = 'login.html'; return; }
+        try {
+            var u = JSON.parse(raw);
+            if (u.status === 'approved') { window.location.href = 'index.html'; return; }
+            if (u.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
+        } catch(e) { window.location.href = 'login.html'; }
+    })();
+    </script>
 </head>
 <body>
     <div class="auth-container">
@@ -19,33 +30,29 @@
                 <h1>Account Status</h1>
                 <p>Your account cannot be accessed</p>
             </div>
-
             <div class="waiting-content">
                 <div class="waiting-icon error"><i class="fas fa-exclamation-triangle"></i></div>
                 <p class="waiting-email" id="userEmail"></p>
                 <p class="status-label">Status:</p>
                 <p class="status-value" id="statusText"></p>
-                <p class="waiting-message">Your account is not active. Please contact admin for assistance.</p>
+                <p class="waiting-message">Your account is not active. Please contact admin.</p>
             </div>
-
             <div class="auth-footer">
                 <a href="login.html" class="auth-link"><i class="fas fa-arrow-left"></i> Back to Login</a>
             </div>
         </div>
     </div>
-
     <script>
     (function() {
         var raw = localStorage.getItem('mazval_user');
-        if (!raw) { window.location.href = 'login.html'; return; }
-        try {
-            var u = JSON.parse(raw);
-            if (u.status === 'approved') { window.location.href = 'index.html'; return; }
-            if (u.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
-            document.getElementById('userEmail').textContent = u.email;
-            document.getElementById('statusText').textContent = u.status.toUpperCase();
-            document.getElementById('statusText').className = 'status-value ' + u.status;
-        } catch(e) { window.location.href = 'login.html'; }
+        if (raw) {
+            try {
+                var u = JSON.parse(raw);
+                document.getElementById('userEmail').textContent = u.email;
+                document.getElementById('statusText').textContent = u.status.toUpperCase();
+                document.getElementById('statusText').className = 'status-value ' + u.status;
+            } catch(e) {}
+        }
     })();
     </script>
 </body>
