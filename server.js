@@ -183,7 +183,12 @@ app.post('/api/chat', auth, async (req, res) => {
         try {
             const r = await fetch(`https://www.keyrafara.com/ai/image?prompt=${encodeURIComponent(message)}&model=flux`);
             const d = await r.json();
-            const imgResp = d.url || d.image || d.data?.url || d.data?.image || '';
+            let imgResp = d.url || d.image || d.data?.url || d.data?.image || '';
+            if (!imgResp && d.result) {
+                if (typeof d.result === 'string') imgResp = d.result;
+                else if (d.result.url) imgResp = d.result.url;
+                else if (d.result.image) imgResp = d.result.image;
+            }
             const assistantMsg = { id: genId(), conversationId: conv.id, role: 'assistant', content: imgResp ? `![Generated Image](${imgResp})` : 'Image generation completed.', model: 'image', createdAt: new Date().toISOString() };
             msgs.push(assistantMsg);
             writeDB('messages', msgs);
@@ -213,6 +218,11 @@ app.post('/api/chat', auth, async (req, res) => {
         else if (typeof d.message === 'string') aiResp = d.message;
         else if (typeof d.content === 'string') aiResp = d.content;
         else if (typeof d.result === 'string') aiResp = d.result;
+        else if (d.result && typeof d.result === 'object') {
+            if (typeof d.result.answer === 'string') aiResp = d.result.answer;
+            else if (typeof d.result.response === 'string') aiResp = d.result.response;
+            else if (typeof d.result.text === 'string') aiResp = d.result.text;
+        }
         else if (d.choices && d.choices.length > 0) aiResp = d.choices[0].message?.content || d.choices[0].text || '';
         else if (typeof d === 'string') aiResp = d;
         else aiResp = 'I received your message. How can I help?';
