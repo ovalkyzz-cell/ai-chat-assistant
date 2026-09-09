@@ -21,6 +21,11 @@ app.use((req, res, next) => {
     next();
 });
 
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
+});
+
 // ========================================
 // DATABASE (In-memory with file fallback)
 // ========================================
@@ -954,6 +959,12 @@ app.patch('/api/admin/discounts/:code', authMiddleware, adminMiddleware, (req, r
 // ========================================
 // START SERVER
 // ========================================
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: err.message || 'Internal server error' } });
+});
+
 if (process.env.VERCEL !== '1') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
