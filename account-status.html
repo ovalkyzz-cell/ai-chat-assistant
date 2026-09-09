@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<script>var _au=localStorage.getItem('mazval_user');if(!_au){document.write('<script>location.href="login.html"<\/script>');throw'x';}try{var _u=JSON.parse(_au);if(_u.status==='approved'){document.write('<script>location.href="index.html"<\/script>');throw'x';}if(_u.status==='pending'){document.write('<script>location.href="waiting-approval.html"<\/script>');throw'x';}}catch(e){if(e!=='x'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}</script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -8,18 +8,6 @@
     <link rel="stylesheet" href="css/auth.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script>
-    // AUTH CHECK - runs before body
-    var _au = localStorage.getItem('mazval_user');
-    if (!_au) { document.write('<script>location.href="login.html"<\/script>'); }
-    else {
-        try {
-            var _u = JSON.parse(_au);
-            if (_u.status === 'approved') { document.write('<script>location.href="index.html"<\/script>'); }
-            else if (_u.status === 'pending') { document.write('<script>location.href="waiting-approval.html"<\/script>'); }
-        } catch(e) { document.write('<script>location.href="login.html"<\/script>'); }
-    }
-    </script>
 </head>
 <body>
     <div class="auth-container">
