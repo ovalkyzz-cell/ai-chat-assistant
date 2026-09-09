@@ -17,25 +17,20 @@
                     <img src="https://j.top4top.io/p_3903uecld0.png" alt="Mazval GPT AI" class="auth-logo">
                 </div>
                 <h1>Admin Portal</h1>
-                <p>Secure access to admin dashboard</p>
+                <p>Secure admin access</p>
             </div>
 
-            <div class="security-notice">
-                <i class="fas fa-lock"></i>
-                <span>Restricted area - Authorized personnel only</span>
-            </div>
-
-            <form class="auth-form" id="adminLoginForm" onsubmit="return handleAdminLogin(event)">
+            <form class="auth-form" id="adminLoginForm">
                 <div class="form-group">
-                    <label for="adminKey">Admin Access Key</label>
+                    <label>Access Key</label>
                     <div class="input-wrapper">
                         <i class="fas fa-key"></i>
-                        <input type="password" id="adminKey" placeholder="Enter admin access key" required>
+                        <input type="password" id="adminKey" placeholder="Enter access key" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Email</label>
+                    <label>Email</label>
                     <div class="input-wrapper">
                         <i class="fas fa-envelope"></i>
                         <input type="email" id="email" placeholder="Enter admin email" required>
@@ -43,17 +38,17 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label>Password</label>
                     <div class="input-wrapper">
                         <i class="fas fa-lock"></i>
                         <input type="password" id="password" placeholder="Enter password" required>
-                        <button type="button" class="toggle-password" onclick="togglePwd(this)">
+                        <button type="button" class="toggle-password" onclick="var i=this.parentElement.querySelector('input');var ic=this.querySelector('i');if(i.type==='password'){i.type='text';ic.classList.replace('fa-eye','fa-eye-slash');}else{i.type='password';ic.classList.replace('fa-eye-slash','fa-eye');}">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
 
-                <button type="submit" class="auth-btn admin-btn" id="adminLoginBtn">
+                <button type="submit" class="auth-btn admin-btn">
                     <span>Access Dashboard</span>
                     <i class="fas fa-arrow-right"></i>
                 </button>
@@ -63,71 +58,56 @@
                 <p><a href="login.html"><i class="fas fa-arrow-left"></i> Back to User Login</a></p>
             </div>
         </div>
-
-        <div class="footer-credit">
-            <p>&copy; Created Mazz-Vall</p>
-        </div>
+        <div class="footer-credit"><p>&copy; Created Mazz-Vall</p></div>
     </div>
 
     <script>
-    function togglePwd(btn) {
-        var input = btn.parentElement.querySelector('input');
-        var icon = btn.querySelector('i');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
-        }
-    }
-
     function showToast(msg, type) {
-        var existing = document.querySelectorAll('.toast');
-        existing.forEach(function(t) { t.remove(); });
-        var icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle' };
-        var toast = document.createElement('div');
-        toast.className = 'toast ' + (type || 'info');
-        toast.innerHTML = '<i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i><span>' + msg + '</span>';
-        document.body.appendChild(toast);
-        setTimeout(function() { toast.remove(); }, 4000);
+        var t = document.createElement('div');
+        t.className = 'toast ' + (type || 'info');
+        var icons = {success:'fa-check-circle',error:'fa-times-circle',warning:'fa-exclamation-circle'};
+        t.innerHTML = '<i class="fas ' + (icons[type]||'fa-info-circle') + '"></i><span>' + msg + '</span>';
+        document.body.appendChild(t);
+        setTimeout(function(){ t.remove(); }, 4000);
     }
 
-    function handleAdminLogin(e) {
-        e.preventDefault();
-        var accessKey = document.getElementById('adminKey').value.trim();
-        var email = document.getElementById('email').value.trim();
-        var password = document.getElementById('password').value;
+    // Check if already logged in as admin
+    (function() {
+        var s = localStorage.getItem('mazval_user');
+        if (s) {
+            try {
+                var u = JSON.parse(s);
+                if (u.role === 'admin') { window.location.href = 'admin.html'; return; }
+            } catch(e) {}
+        }
+    })();
 
-        if (accessKey !== 'ADMIN@MAZZVALL2024') {
+    document.getElementById('adminLoginForm').onsubmit = function(e) {
+        e.preventDefault();
+        var key = document.getElementById('adminKey').value.trim();
+        var email = document.getElementById('email').value.trim();
+        var pass = document.getElementById('password').value;
+
+        // Simple check - hardcoded admin credentials
+        if (key !== 'ADMIN@MAZZVALL2024') {
             showToast('Invalid access key', 'error');
-            return false;
+            return;
         }
         if (email !== 'admin@mazzvall.com') {
             showToast('Invalid email', 'error');
-            return false;
+            return;
         }
-        if (password !== 'Admin@Secure123!') {
+        if (pass !== 'Admin@Secure123!') {
             showToast('Invalid password', 'error');
-            return false;
+            return;
         }
 
-        var session = {
-            id: 'sess_' + Date.now(),
-            userId: 'admin_001',
-            email: email,
-            role: 'admin',
-            status: 'approved',
-            plan: 'premium',
-            createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        };
-
-        localStorage.setItem('mazval_currentUser', JSON.stringify(session));
+        // Save admin session
+        var admin = {id:'admin_001', name:'Admin', email:email, role:'admin', status:'approved', plan:'premium'};
+        localStorage.setItem('mazval_user', JSON.stringify(admin));
         showToast('Welcome Admin!', 'success');
-        setTimeout(function() { window.location.href = 'admin.html'; }, 800);
-        return false;
-    }
+        setTimeout(function(){ window.location.href = 'admin.html'; }, 600);
+    };
     </script>
 </body>
 </html>

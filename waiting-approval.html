@@ -17,47 +17,37 @@
                     <img src="https://j.top4top.io/p_3903uecld0.png" alt="Mazval GPT AI" class="auth-logo">
                 </div>
                 <h1>Waiting for Approval</h1>
-                <p>Your account is being reviewed by admin</p>
+                <p>Your account is being reviewed</p>
             </div>
 
             <div class="waiting-content">
-                <div class="waiting-icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="waiting-info">
-                    <p class="waiting-email" id="waitingUserEmail"></p>
-                    <p class="waiting-message">
-                        Your account has been created successfully but is pending admin approval.
-                        Please wait until an administrator reviews and approves your account.
-                    </p>
-                    <div class="waiting-steps">
-                        <div class="step completed">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Account Created</span>
-                        </div>
-                        <div class="step active">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <span>Waiting for Admin</span>
-                        </div>
-                        <div class="step">
-                            <i class="fas fa-circle"></i>
-                            <span>Access Granted</span>
-                        </div>
-                    </div>
+                <div class="waiting-icon"><i class="fas fa-clock"></i></div>
+                <p class="waiting-email" id="userEmail"></p>
+                <p class="waiting-message">Your account has been created but is pending admin approval. Please wait until an administrator reviews your account.</p>
+                <div class="waiting-steps">
+                    <div class="step completed"><i class="fas fa-check-circle"></i><span>Account Created</span></div>
+                    <div class="step active"><i class="fas fa-spinner fa-spin"></i><span>Waiting for Admin</span></div>
+                    <div class="step"><i class="fas fa-circle"></i><span>Access Granted</span></div>
                 </div>
             </div>
 
             <div class="auth-footer">
-                <button class="auth-btn secondary" onclick="window.location.reload()">
-                    <i class="fas fa-sync-alt"></i> Refresh Status
-                </button>
-                <a href="login.html" class="auth-link">
-                    <i class="fas fa-arrow-left"></i> Back to Login
-                </a>
+                <a href="login.html" class="auth-link"><i class="fas fa-arrow-left"></i> Back to Login</a>
             </div>
         </div>
     </div>
 
-    <script src="js/auth.js"></script>
+    <script>
+    (function() {
+        var raw = localStorage.getItem('mazval_user');
+        if (!raw) { window.location.href = 'login.html'; return; }
+        try {
+            var u = JSON.parse(raw);
+            if (u.status === 'approved') { window.location.href = 'index.html'; return; }
+            if (u.status === 'rejected' || u.status === 'suspended') { window.location.href = 'account-status.html'; return; }
+            document.getElementById('userEmail').textContent = u.email;
+        } catch(e) { window.location.href = 'login.html'; }
+    })();
+    </script>
 </body>
 </html>

@@ -434,17 +434,19 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
     <script>
-        // Route Guard: require admin
-        (function() {
-            var s = getSession();
-            if (!s) { window.location.href = 'admin-login.html'; return; }
-            if (s.role !== 'admin' || s.status !== 'approved') {
+    // Route Guard - Admin only
+    (function() {
+        var raw = localStorage.getItem('mazval_user');
+        if (!raw) { window.location.href = 'admin-login.html'; return; }
+        try {
+            var u = JSON.parse(raw);
+            if (u.role !== 'admin' || u.status !== 'approved') {
                 window.location.href = 'login.html'; return;
             }
-        })();
+        } catch(e) { window.location.href = 'admin-login.html'; }
+    })();
     </script>
-    <script src="js/admin.js"></script>
 </body>
 </html>

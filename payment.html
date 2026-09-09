@@ -266,16 +266,17 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="js/auth.js"></script>
-    <script>
-        // Route Guard: require auth + approved
-        (function() {
-            var s = getSession();
-            if (!s) { window.location.href = 'login.html'; return; }
-            if (s.status === 'pending') { window.location.href = 'waiting-approval.html'; return; }
-            if (s.status === 'rejected' || s.status === 'suspended') { window.location.href = 'account-status.html'; return; }
-        })();
-    </script>
     <script src="js/payment.js"></script>
+    <script>
+    // Route Guard
+    (function() {
+        var raw = localStorage.getItem('mazval_user');
+        if (!raw) { window.location.href = 'login.html'; return; }
+        try {
+            var u = JSON.parse(raw);
+            if (u.status !== 'approved') { window.location.href = 'login.html'; return; }
+        } catch(e) { window.location.href = 'login.html'; }
+    })();
+    </script>
 </body>
 </html>
