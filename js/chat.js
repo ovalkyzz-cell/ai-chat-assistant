@@ -167,39 +167,41 @@ function hasModelAccess(model) {
 }
 
 // DOM Elements
-const elements = {
-    sidebar: document.getElementById('sidebar'),
-    sidebarOverlay: document.getElementById('sidebarOverlay'),
-    sidebarToggle: document.getElementById('sidebarToggle'),
-    newChatBtn: document.getElementById('newChatBtn'),
-    chatList: document.getElementById('chatList'),
-    chatContainer: document.getElementById('chatContainer'),
-    welcomeScreen: document.getElementById('welcomeScreen'),
-    messagesContainer: document.getElementById('messagesContainer'),
-    messageInput: document.getElementById('messageInput'),
-    sendBtn: document.getElementById('sendBtn'),
-    modelSelect: document.getElementById('modelSelect'),
-    userName: document.getElementById('userName'),
-    logoutBtn: document.getElementById('logoutBtn'),
-    userInfo: document.getElementById('userInfo'),
-    inputArea: document.getElementById('inputArea'),
-    // Panels
-    chatsPanel: document.getElementById('chatsPanel'),
-    toolsPanel: document.getElementById('toolsPanel'),
-    downloadersPanel: document.getElementById('downloadersPanel'),
-    // Tool Interface
-    toolInterface: document.getElementById('toolInterface'),
-    toolTitle: document.getElementById('toolTitle'),
-    toolContent: document.getElementById('toolContent'),
-    toolResult: document.getElementById('toolResult'),
-    backToChat: document.getElementById('backToChat'),
-    // Modals
-    toolModal: document.getElementById('toolModal'),
-    resultModal: document.getElementById('resultModal')
-};
+let elements = {};
+
+function cacheElements() {
+    elements = {
+        sidebar: document.getElementById('sidebar'),
+        sidebarOverlay: document.getElementById('sidebarOverlay'),
+        sidebarToggle: document.getElementById('sidebarToggle'),
+        newChatBtn: document.getElementById('newChatBtn'),
+        chatList: document.getElementById('chatList'),
+        chatContainer: document.getElementById('chatContainer'),
+        welcomeScreen: document.getElementById('welcomeScreen'),
+        messagesContainer: document.getElementById('messagesContainer'),
+        messageInput: document.getElementById('messageInput'),
+        sendBtn: document.getElementById('sendBtn'),
+        modelSelect: document.getElementById('modelSelect'),
+        userName: document.getElementById('userName'),
+        logoutBtn: document.getElementById('logoutBtn'),
+        userInfo: document.getElementById('userInfo'),
+        inputArea: document.getElementById('inputArea'),
+        chatsPanel: document.getElementById('chatsPanel'),
+        toolsPanel: document.getElementById('toolsPanel'),
+        downloadersPanel: document.getElementById('downloadersPanel'),
+        toolInterface: document.getElementById('toolInterface'),
+        toolTitle: document.getElementById('toolTitle'),
+        toolContent: document.getElementById('toolContent'),
+        toolResult: document.getElementById('toolResult'),
+        backToChat: document.getElementById('backToChat'),
+        toolModal: document.getElementById('toolModal'),
+        resultModal: document.getElementById('resultModal')
+    };
+}
 
 // Initialize App
 function init() {
+    cacheElements();
     loadUserData();
     loadChats();
     setupEventListeners();
