@@ -25,6 +25,10 @@
       "dest": "/pricing.html"
     },
     {
+      "src": "/payment",
+      "dest": "/payment.html"
+    },
+    {
       "src": "/admin",
       "dest": "/admin.html"
     },

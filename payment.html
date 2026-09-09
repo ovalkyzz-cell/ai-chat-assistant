@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - AI Chat Assistant</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/payment.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="payment-page">
+    <!-- Navbar -->
+    <nav class="payment-nav">
+        <div class="nav-brand">
+            <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="nav-logo">
+            <span>AI Chat Assistant</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Chat</a>
+            <a href="pricing.html">Pricing</a>
+            <a href="login.html" class="nav-btn">Login</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="payment-container">
+        <!-- Step 1: Select Plan -->
+        <div class="payment-step active" id="step1">
+            <div class="step-header">
+                <div class="step-indicator">
+                    <span class="step active">1</span>
+                    <span class="step-line"></span>
+                    <span class="step">2</span>
+                    <span class="step-line"></span>
+                    <span class="step">3</span>
+                </div>
+                <h1>Select Your Plan</h1>
+                <p>Choose the plan that fits your needs</p>
+            </div>
+
+            <div class="plan-options">
+                <div class="plan-option" data-plan="basic" data-price="10000">
+                    <div class="plan-radio"></div>
+                    <div class="plan-info">
+                        <h3>Basic</h3>
+                        <p>Pay per chat</p>
+                    </div>
+                    <div class="plan-price">Rp10.000</div>
+                </div>
+
+                <div class="plan-option popular" data-plan="pro" data-price="20000">
+                    <div class="popular-tag">Popular</div>
+                    <div class="plan-radio"></div>
+                    <div class="plan-info">
+                        <h3>Pro</h3>
+                        <p>Monthly subscription</p>
+                    </div>
+                    <div class="plan-price">Rp20.000</div>
+                </div>
+
+                <div class="plan-option" data-plan="premium" data-price="35000">
+                    <div class="plan-radio"></div>
+                    <div class="plan-info">
+                        <h3>Premium</h3>
+                        <p>Unlimited access</p>
+                    </div>
+                    <div class="plan-price">Rp35.000</div>
+                </div>
+
+                <div class="plan-option reseller" data-plan="reseller" data-price="50000">
+                    <div class="plan-radio"></div>
+                    <div class="plan-info">
+                        <h3>Reseller</h3>
+                        <p>Manage up to 10 users</p>
+                    </div>
+                    <div class="plan-price">Rp50.000</div>
+                </div>
+            </div>
+
+            <button class="continue-btn" id="continueToStep2" disabled>
+                Continue <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Step 2: Enter Details -->
+        <div class="payment-step" id="step2">
+            <div class="step-header">
+                <div class="step-indicator">
+                    <span class="step completed">1</span>
+                    <span class="step-line active"></span>
+                    <span class="step active">2</span>
+                    <span class="step-line"></span>
+                    <span class="step">3</span>
+                </div>
+                <h1>Enter Your Details</h1>
+                <p>Provide your information for the subscription</p>
+            </div>
+
+            <div class="details-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="customerName" placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="customerEmail" placeholder="Enter your email">
+                </div>
+                <div class="form-group" id="passwordGroup">
+                    <label>Password</label>
+                    <input type="password" id="customerPassword" placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <input type="text" id="paymentDesc" placeholder="Payment for...">
+                </div>
+
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
+                    <div class="summary-row">
+                        <span>Plan</span>
+                        <span id="summaryPlan">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Price</span>
+                        <span id="summaryPrice">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Fee</span>
+                        <span id="summaryFee">-</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span id="summaryTotal">-</span>
+                    </div>
+                </div>
+
+                <div class="form-buttons">
+                    <button class="back-btn" id="backToStep1">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                    <button class="continue-btn" id="continueToStep3">
+                        Pay with QRIS <i class="fas fa-qrcode"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: QRIS Payment -->
+        <div class="payment-step" id="step3">
+            <div class="step-header">
+                <div class="step-indicator">
+                    <span class="step completed">1</span>
+                    <span class="step-line active"></span>
+                    <span class="step completed">2</span>
+                    <span class="step-line active"></span>
+                    <span class="step active">3</span>
+                </div>
+                <h1>Scan QR Code</h1>
+                <p>Scan the QR code below to complete payment</p>
+            </div>
+
+            <div class="qris-container">
+                <div class="qris-card">
+                    <div class="qris-header">
+                        <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat">
+                        <span>AI Chat Assistant</span>
+                    </div>
+                    
+                    <div class="qris-amount">
+                        <span>Total Amount</span>
+                        <h2 id="qrisTotalAmount">Rp0</h2>
+                    </div>
+
+                    <div class="qris-code" id="qrisCode">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Generating QR Code...</span>
+                        </div>
+                    </div>
+
+                    <div class="qris-timer" id="qrisTimer">
+                        <i class="fas fa-clock"></i>
+                        <span>Expires in: <strong id="timerDisplay">15:00</strong></span>
+                    </div>
+
+                    <div class="qris-instructions">
+                        <p><strong>How to pay:</strong></p>
+                        <ol>
+                            <li>Open your banking/e-wallet app</li>
+                            <li>Select QRIS or Scan QR</li>
+                            <li>Scan the QR code above</li>
+                            <li>Confirm the payment amount</li>
+                        </ol>
+                    </div>
+
+                    <button class="check-status-btn" id="checkStatusBtn">
+                        <i class="fas fa-sync-alt"></i> Check Payment Status
+                    </button>
+
+                    <div class="payment-status" id="paymentStatus">
+                        <div class="status-icon pending">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <span>Waiting for payment...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Success -->
+        <div class="payment-step" id="step4">
+            <div class="success-container">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h1>Payment Successful!</h1>
+                <p>Your subscription has been activated</p>
+                
+                <div class="success-details">
+                    <div class="detail-row">
+                        <span>Transaction ID</span>
+                        <span id="successTxId">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Plan</span>
+                        <span id="successPlan">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Amount Paid</span>
+                        <span id="successAmount">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Expiry Date</span>
+                        <span id="successExpiry">-</span>
+                    </div>
+                </div>
+
+                <div class="success-actions">
+                    <a href="index.html" class="continue-btn">
+                        <i class="fas fa-comments"></i> Start Chatting
+                    </a>
+                    <a href="login.html" class="back-btn">
+                        <i class="fas fa-sign-in-alt"></i> Login Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/payment.js"></script>
+</body>
+</html>
