@@ -267,6 +267,9 @@ function setupEventListeners() {
         elements.modelSelect.addEventListener('change', handleModelChange);
     }
 
+    // Custom Model Selector Dropdown
+    setupModelSelector();
+
     // Suggestion Cards
     document.querySelectorAll('.suggestion-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -1479,6 +1482,73 @@ function closeToolModal() {
 
 function closeResultModal() {
     elements.resultModal?.classList.remove('active');
+}
+
+/* ========================================
+   Custom Model Selector
+   ======================================== */
+
+function setupModelSelector() {
+    const selector = document.getElementById('modelSelector');
+    const current = document.getElementById('modelCurrent');
+    const dropdown = document.getElementById('modelDropdown');
+    const options = document.querySelectorAll('.model-option');
+    const hiddenSelect = document.getElementById('modelSelect');
+
+    if (!selector || !current || !dropdown) return;
+
+    // Toggle dropdown
+    current.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selector.classList.toggle('open');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!selector.contains(e.target)) {
+            selector.classList.remove('open');
+        }
+    });
+
+    // Option click
+    options.forEach(option => {
+        option.addEventListener('click', () => {
+            const model = option.dataset.model;
+            const name = option.querySelector('span:last-child').textContent;
+            const icon = option.querySelector('.model-icon i').className;
+
+            // Update active state
+            options.forEach(o => o.classList.remove('active'));
+            option.classList.add('active');
+
+            // Update current display
+            current.querySelector('.model-name').textContent = name;
+            current.querySelector('.model-icon i').className = icon;
+
+            // Update hidden select
+            if (hiddenSelect) {
+                hiddenSelect.value = model;
+                hiddenSelect.dispatchEvent(new Event('change'));
+            }
+
+            // Update state
+            ChatState.currentModel = model;
+
+            // Close dropdown
+            selector.classList.remove('open');
+        });
+    });
+
+    // Keyboard navigation
+    current.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selector.classList.toggle('open');
+        }
+        if (e.key === 'Escape') {
+            selector.classList.remove('open');
+        }
+    });
 }
 
 // Initialize on DOM load

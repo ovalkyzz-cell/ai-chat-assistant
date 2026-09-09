@@ -137,22 +137,66 @@
                     <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="header-logo">
                     <h1 class="chat-title">AI Chat Assistant</h1>
                 </div>
-                <div class="model-selector">
-                    <label>Model:</label>
-                    <select id="modelSelect">
-                        <optgroup label="AI Models">
-                            <option value="chatgpt">ChatGPT</option>
-                            <option value="gemini">Gemini</option>
-                            <option value="copilot">Copilot</option>
-                            <option value="apertus">Apertus</option>
-                            <option value="claude-opus">Claude Opus</option>
-                            <option value="mistral">Mistral</option>
-                            <option value="felo">Felo</option>
-                            <option value="turboseek">TurboSeek</option>
-                        </optgroup>
-                        <optgroup label="Image Generation">
-                            <option value="image">AI Image Generator</option>
-                        </optgroup>
+                <div class="model-selector" id="modelSelector">
+                    <div class="model-current" id="modelCurrent">
+                        <span class="model-icon"><i class="fas fa-robot"></i></span>
+                        <span class="model-name">ChatGPT</span>
+                        <i class="fas fa-chevron-down model-arrow"></i>
+                    </div>
+                    <div class="model-dropdown" id="modelDropdown">
+                        <div class="model-group">
+                            <div class="model-group-label">AI Models</div>
+                            <div class="model-option active" data-model="chatgpt">
+                                <span class="model-icon"><i class="fas fa-comment-dots"></i></span>
+                                <span>ChatGPT</span>
+                            </div>
+                            <div class="model-option" data-model="gemini">
+                                <span class="model-icon"><i class="fas fa-gem"></i></span>
+                                <span>Gemini</span>
+                            </div>
+                            <div class="model-option" data-model="copilot">
+                                <span class="model-icon"><i class="fas fa-plane"></i></span>
+                                <span>Copilot</span>
+                            </div>
+                            <div class="model-option" data-model="apertus">
+                                <span class="model-icon"><i class="fas fa-globe"></i></span>
+                                <span>Apertus</span>
+                            </div>
+                            <div class="model-option" data-model="claude-opus">
+                                <span class="model-icon"><i class="fas fa-brain"></i></span>
+                                <span>Claude Opus</span>
+                            </div>
+                            <div class="model-option" data-model="mistral">
+                                <span class="model-icon"><i class="fas fa-wind"></i></span>
+                                <span>Mistral</span>
+                            </div>
+                            <div class="model-option" data-model="felo">
+                                <span class="model-icon"><i class="fas fa-search"></i></span>
+                                <span>Felo</span>
+                            </div>
+                            <div class="model-option" data-model="turboseek">
+                                <span class="model-icon"><i class="fas fa-bolt"></i></span>
+                                <span>TurboSeek</span>
+                            </div>
+                        </div>
+                        <div class="model-group">
+                            <div class="model-group-label">Image Generation</div>
+                            <div class="model-option" data-model="image">
+                                <span class="model-icon"><i class="fas fa-image"></i></span>
+                                <span>AI Image Generator</span>
+                            </div>
+                        </div>
+                    </div>
+                    <select id="modelSelect" class="hidden-select">
+                        <option value="chatgpt">ChatGPT</option>
+                        <option value="gemini">Gemini</option>
+                        <option value="copilot">Copilot</option>
+                        <option value="apertus">Apertus</option>
+                        <option value="claude-opus">Claude Opus</option>
+                        <option value="mistral">Mistral</option>
+                        <option value="felo">Felo</option>
+                        <option value="turboseek">TurboSeek</option>
+                        <option value="image">AI Image Generator</option>
                     </select>
                 </div>
             </header>

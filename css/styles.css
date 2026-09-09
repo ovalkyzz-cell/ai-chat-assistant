@@ -324,34 +324,147 @@ input, textarea, select {
 
 .model-selector {
     margin-left: auto;
+    position: relative;
+}
+
+.hidden-select {
+    display: none;
+}
+
+.model-current {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.model-selector label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.model-selector select {
-    padding: 6px 12px;
-    background-color: var(--bg-tertiary);
-    color: var(--text-primary);
+    padding: 8px 14px;
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-size: 0.85rem;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 160px;
 }
 
-.model-selector select:hover {
+.model-current:hover {
     border-color: var(--accent-primary);
+    background: linear-gradient(135deg, var(--bg-hover), var(--bg-tertiary));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 163, 127, 0.15);
 }
 
-.model-selector select:focus {
-    border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
+.model-current .model-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.model-current .model-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.model-current .model-arrow {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+}
+
+.model-selector.open .model-current .model-arrow {
+    transform: rotate(180deg);
+}
+
+.model-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.95);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.model-selector.open .model-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.model-group {
+    padding: 8px 0;
+}
+
+.model-group + .model-group {
+    border-top: 1px solid var(--border-color);
+}
+
+.model-group-label {
+    padding: 8px 16px 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.model-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-secondary);
+}
+
+.model-option:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.model-option.active {
+    background: linear-gradient(135deg, rgba(16, 163, 127, 0.15), rgba(16, 163, 127, 0.05));
+    color: var(--accent-primary);
+}
+
+.model-option.active .model-icon {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: white;
+}
+
+.model-option .model-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.model-option:hover .model-icon {
+    transform: scale(1.1);
+    background: var(--bg-active);
+}
+
+.model-option span:last-child {
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 /* ========================================
