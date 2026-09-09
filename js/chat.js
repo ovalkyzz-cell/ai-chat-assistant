@@ -62,7 +62,7 @@ const PRICING_PLANS = {
 
 // Get Current User's Plan
 function getCurrentUserPlan() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const currentUser = JSON.parse(localStorage.getItem('mazval_user'));
     if (!currentUser) return 'free';
     
     // Admin has full access
@@ -211,7 +211,7 @@ function init() {
 
 // Load User Data
 function loadUserData() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const currentUser = JSON.parse(localStorage.getItem('mazval_user'));
     if (currentUser && elements.userName) {
         elements.userName.textContent = currentUser.name || currentUser.email.split('@')[0];
     }
@@ -900,7 +900,7 @@ function autoResizeTextarea() {
 // Handle Logout
 function handleLogout(e) {
     e.preventDefault();
-    localStorage.removeItem('currentUser');
+    localStorage.removeItem('mazval_user');
     window.location.href = 'login.html';
 }
 
