@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reseller Dashboard - AI Chat Assistant</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
+    <link rel="stylesheet" href="css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="admin-brand">
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" style="width: 36px; height: 36px;">
+                    <span>Reseller Panel</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#users" class="nav-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>My Users</span>
+                    <span class="badge" id="userCountBadge">0/10</span>
+                </a>
+                <a href="#create-user" class="nav-item" data-section="create-user">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Create User</span>
+                </a>
+                <a href="#subscription" class="nav-item" data-section="subscription">
+                    <i class="fas fa-crown"></i>
+                    <span>My Subscription</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat App</span>
+                </a>
+                <a href="#" class="nav-item" id="resellerLogout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Header -->
+            <header class="admin-header">
+                <button class="sidebar-toggle" id="adminSidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1 id="pageTitle">Reseller Dashboard</h1>
+                </div>
+                <div class="header-actions">
+                    <div class="admin-profile">
+                        <div class="profile-avatar">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <span id="resellerName">Reseller</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="admin-content">
+                <!-- Dashboard Section -->
+                <section class="content-section active" id="dashboardSection">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalUsersStat">0/10</h3>
+                                <p>Users Active</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalChatsStat">0</h3>
+                                <p>Total Chats Today</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon yellow">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="daysLeftStat">30</h3>
+                                <p>Days Left</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Pro</h3>
+                                <p>Plan</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Recent User Activity</h3>
+                            </div>
+                            <div class="card-content">
+                                <div id="recentActivity" class="user-list-compact">
+                                    <p class="empty-state">No activity yet</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3>Quick Actions</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="quick-actions">
+                                    <button class="quick-action-btn" onclick="navigateToSection('create-user')">
+                                        <i class="fas fa-user-plus"></i>
+                                        <span>Add New User</span>
+                                    </button>
+                                    <button class="quick-action-btn" onclick="exportUserData()">
+                                        <i class="fas fa-download"></i>
+                                        <span>Export Data</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Users Section -->
+                <section class="content-section" id="usersSection">
+                    <div class="section-header">
+                        <h2>My Users (<span id="userCount">0</span>/10)</h2>
+                        <button class="btn btn-primary" onclick="navigateToSection('create-user')">
+                            <i class="fas fa-plus"></i> Add User
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Last Active</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <!-- Users will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Create User Section -->
+                <section class="content-section" id="createUserSection">
+                    <div class="section-header">
+                        <h2>Create New User</h2>
+                    </div>
+                    <div class="create-user-form">
+                        <div class="form-card">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="newUserName" placeholder="Enter user's full name">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="newUserEmail" placeholder="Enter user's email">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="newUserPassword" placeholder="Enter password" style="flex: 1;">
+                                    <button class="btn btn-secondary" onclick="generatePassword()">
+                                        <i class="fas fa-random"></i> Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Subscription</label>
+                                <select id="newUserPlan">
+                                    <option value="pro">Pro (Rp20K/month)</option>
+                                    <option value="premium">Premium (Rp35K/month)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Daily Message Limit</label>
+                                <input type="number" id="newUserLimit" value="500" min="10" max="9999">
+                            </div>
+                            <button class="btn btn-primary" onclick="createUser()" style="width: 100%;">
+                                <i class="fas fa-user-plus"></i> Create User Account
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Subscription Section -->
+                <section class="content-section" id="subscriptionSection">
+                    <div class="section-header">
+                        <h2>My Subscription</h2>
+                    </div>
+                    <div class="subscription-card">
+                        <div class="sub-header">
+                            <div class="sub-plan">
+                                <i class="fas fa-crown"></i>
+                                <span>Reseller Plan</span>
+                            </div>
+                            <span class="status-badge active">Active</span>
+                        </div>
+                        <div class="sub-details">
+                            <div class="sub-item">
+                                <span class="label">Price</span>
+                                <span class="value">Rp50,000/month</span>
+                            </div>
+                            <div class="sub-item">
+                                <span class="label">Max Users</span>
+                                <span class="value">10 accounts</span>
+                            </div>
+                            <div class="sub-item">
+                                <span class="label">Next Billing</span>
+                                <span class="value" id="nextBilling">-</span>
+                            </div>
+                            <div class="sub-item">
+                                <span class="label">Status</span>
+                                <span class="value" style="color: var(--success);">Active</span>
+                            </div>
+                        </div>
+                        <div class="sub-features">
+                            <h3>Included Features</h3>
+                            <ul>
+                                <li><i class="fas fa-check"></i> All AI Models</li>
+                                <li><i class="fas fa-check"></i> Image Generation</li>
+                                <li><i class="fas fa-check"></i> All Tools</li>
+                                <li><i class="fas fa-check"></i> All Downloaders</li>
+                                <li><i class="fas fa-check"></i> User Management Dashboard</li>
+                                <li><i class="fas fa-check"></i> Up to 10 User Accounts</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/reseller.js"></script>
+</body>
+</html>

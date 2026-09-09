@@ -47,6 +47,121 @@ const ChatState = {
     currentDownloader: null
 };
 
+// ========================================
+// Subscription & Rate Limiting
+// ========================================
+
+// Pricing Plans Configuration (loaded from localStorage or default)
+const PRICING_PLANS = {
+    free: { dailyLimit: 5, features: ['chatgpt'], imageGen: false, tools: false, downloaders: false },
+    basic: { dailyLimit: 100, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: false, tools: true, downloaders: true },
+    pro: { dailyLimit: 500, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
+    premium: { dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true },
+    reseller: { dailyLimit: -1, features: ['chatgpt', 'gemini', 'copilot', 'apertus', 'claude-opus', 'mistral', 'felo', 'turboseek'], imageGen: true, tools: true, downloaders: true }
+};
+
+// Get Current User's Plan
+function getCurrentUserPlan() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) return 'free';
+    return currentUser.plan || 'free';
+}
+
+// Get Plan Limits
+function getPlanLimits(plan) {
+    // Load admin-configured pricing if available
+    const savedPricing = localStorage.getItem('pricingConfig');
+    if (savedPricing) {
+        const config = JSON.parse(savedPricing);
+        if (config[plan]) {
+            return {
+                dailyLimit: config[plan].dailyLimit,
+                features: PRICING_PLANS[plan]?.features || [],
+                imageGen: PRICING_PLANS[plan]?.imageGen || false,
+                tools: PRICING_PLANS[plan]?.tools || false,
+                downloaders: PRICING_PLANS[plan]?.downloaders || false
+            };
+        }
+    }
+    return PRICING_PLANS[plan] || PRICING_PLANS.free;
+}
+
+// Check Daily Message Limit
+function checkDailyLimit() {
+    const plan = getCurrentUserPlan();
+    const limits = getPlanLimits(plan);
+    
+    // Unlimited for premium and reseller
+    if (limits.dailyLimit === -1) return true;
+    
+    // Get today's message count
+    const today = new Date().toDateString();
+    const usage = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
+    const todayCount = usage[today] || 0;
+    
+    return todayCount < limits.dailyLimit;
+}
+
+// Increment Daily Usage
+function incrementDailyUsage() {
+    const today = new Date().toDateString();
+    const usage = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
+    usage[today] = (usage[today] || 0) + 1;
+    
+    // Clean up old entries
+    Object.keys(usage).forEach(date => {
+        if (date !== today) {
+            delete usage[date];
+        }
+    });
+    
+    localStorage.setItem('dailyUsage', JSON.stringify(usage));
+}
+
+// Get Daily Usage Info
+function getDailyUsageInfo() {
+    const plan = getCurrentUserPlan();
+    const limits = getPlanLimits(plan);
+    const today = new Date().toDateString();
+    const usage = JSON.parse(localStorage.getItem('dailyUsage') || '{}');
+    const used = usage[today] || 0;
+    const limit = limits.dailyLimit;
+    
+    return { used, limit, plan, isUnlimited: limit === -1 };
+}
+
+// Check if User Has Feature Access
+function hasFeatureAccess(feature) {
+    const plan = getCurrentUserPlan();
+    const limits = getPlanLimits(plan);
+    
+    switch (feature) {
+        case 'image':
+            return limits.imageGen;
+        case 'tools':
+            return limits.tools;
+        case 'downloaders':
+            return limits.downloaders;
+        case 'models':
+            return limits.features;
+        default:
+            return false;
+    }
+}
+
+// Check Model Access
+function hasModelAccess(model) {
+    const plan = getCurrentUserPlan();
+    const limits = getPlanLimits(plan);
+    
+    // Free plan only has chatgpt
+    if (plan === 'free') {
+        return model === 'chatgpt';
+    }
+    
+    return limits.features.includes(model);
+}
+
 // DOM Elements
 const elements = {
     sidebar: document.getElementById('sidebar'),
@@ -379,6 +494,25 @@ async function sendMessage() {
     const message = elements.messageInput.value.trim();
     if (!message || ChatState.isGenerating) return;
 
+    // Check daily limit
+    if (!checkDailyLimit()) {
+        const usageInfo = getDailyUsageInfo();
+        showError(`Daily message limit reached! You've used ${usageInfo.used}/${usageInfo.limit} messages today. Please upgrade your plan.`);
+        return;
+    }
+
+    // Check model access
+    if (!hasModelAccess(ChatState.currentModel)) {
+        showError(`You don't have access to ${ChatState.currentModel}. Please upgrade your plan.`);
+        return;
+    }
+
+    // Check image generation access
+    if (ChatState.currentModel === 'image' && !hasFeatureAccess('image')) {
+        showError('Image generation is only available for Pro and Premium plans. Please upgrade your plan.');
+        return;
+    }
+
     // Create new chat if none exists
     if (!ChatState.currentChatId) {
         createNewChat();
@@ -419,6 +553,9 @@ async function sendMessage() {
         elements.sendBtn.disabled = true;
 
         const response = await getAIResponse(message);
+        
+        // Increment daily usage
+        incrementDailyUsage();
         
         // Hide typing indicator
         hideTypingIndicator();

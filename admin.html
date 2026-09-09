@@ -39,6 +39,15 @@
                     <span>Banned Users</span>
                     <span class="badge danger" id="bannedCountBadge">0</span>
                 </a>
+                <a href="#resellers" class="nav-item" data-section="resellers">
+                    <i class="fas fa-store"></i>
+                    <span>Resellers</span>
+                    <span class="badge" id="resellerCountBadge">0</span>
+                </a>
+                <a href="#pricing" class="nav-item" data-section="pricing">
+                    <i class="fas fa-tags"></i>
+                    <span>Pricing</span>
+                </a>
                 <a href="#settings" class="nav-item" data-section="settings">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
@@ -266,6 +275,104 @@
                                     <i class="fas fa-save"></i> Update Password
                                 </button>
                             </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Resellers Section -->
+                <section class="content-section" id="resellersSection">
+                    <div class="section-header">
+                        <h2>Reseller Management</h2>
+                        <button class="btn btn-primary" id="addResellerBtn">
+                            <i class="fas fa-plus"></i> Add Reseller
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Reseller</th>
+                                    <th>Email</th>
+                                    <th>Users</th>
+                                    <th>Status</th>
+                                    <th>Expiry</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resellersTableBody">
+                                <!-- Resellers will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Pricing Section -->
+                <section class="content-section" id="pricingSection">
+                    <div class="section-header">
+                        <h2>Pricing Management</h2>
+                        <button class="btn btn-primary" id="savePricingBtn">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                    <div class="pricing-grid">
+                        <div class="pricing-card-admin">
+                            <h3><i class="fas fa-gift"></i> Free Plan</h3>
+                            <div class="price-input">
+                                <label>Price</label>
+                                <input type="number" id="priceFree" value="0" disabled>
+                            </div>
+                            <div class="limit-input">
+                                <label>Daily Limit</label>
+                                <input type="number" id="limitFree" value="5">
+                            </div>
+                        </div>
+
+                        <div class="pricing-card-admin">
+                            <h3><i class="fas fa-bolt"></i> Basic Plan</h3>
+                            <div class="price-input">
+                                <label>Price (Rp)</label>
+                                <input type="number" id="priceBasic" value="10000">
+                            </div>
+                            <div class="limit-input">
+                                <label>Daily Limit</label>
+                                <input type="number" id="limitBasic" value="100">
+                            </div>
+                        </div>
+
+                        <div class="pricing-card-admin popular">
+                            <h3><i class="fas fa-star"></i> Pro Plan</h3>
+                            <div class="price-input">
+                                <label>Price (Rp)</label>
+                                <input type="number" id="pricePro" value="20000">
+                            </div>
+                            <div class="limit-input">
+                                <label>Daily Limit</label>
+                                <input type="number" id="limitPro" value="500">
+                            </div>
+                        </div>
+
+                        <div class="pricing-card-admin">
+                            <h3><i class="fas fa-crown"></i> Premium Plan</h3>
+                            <div class="price-input">
+                                <label>Price (Rp)</label>
+                                <input type="number" id="pricePremium" value="35000">
+                            </div>
+                            <div class="limit-input">
+                                <label>Daily Limit (-1 = Unlimited)</label>
+                                <input type="number" id="limitPremium" value="-1">
+                            </div>
+                        </div>
+
+                        <div class="pricing-card-admin reseller">
+                            <h3><i class="fas fa-store"></i> Reseller Plan</h3>
+                            <div class="price-input">
+                                <label>Price (Rp)</label>
+                                <input type="number" id="priceReseller" value="50000">
+                            </div>
+                            <div class="limit-input">
+                                <label>Max Users</label>
+                                <input type="number" id="maxUsersReseller" value="10">
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -754,3 +754,312 @@ function showToast(message, type = 'info') {
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', initAdmin);
+
+/* ========================================
+   Reseller Management
+   ======================================== */
+
+// Render Resellers Table
+function renderResellersTable() {
+    const tbody = document.getElementById('resellersTableBody');
+    if (!tbody) return;
+
+    const resellers = AdminState.users.filter(u => u.role === 'reseller');
+
+    // Update badge
+    const badge = document.getElementById('resellerCountBadge');
+    if (badge) badge.textContent = resellers.length;
+
+    if (resellers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-state">
+                    <i class="fas fa-store" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                    No resellers yet
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = resellers.map(reseller => {
+        const userCount = AdminState.users.filter(u => u.resellerId === reseller.id).length;
+        const maxUsers = reseller.maxUsers || 10;
+        
+        return `
+            <tr>
+                <td>
+                    <div class="user-cell">
+                        <div class="user-cell-avatar">${getInitials(reseller.name)}</div>
+                        <span class="user-cell-name">${escapeHtml(reseller.name)}</span>
+                    </div>
+                </td>
+                <td>${escapeHtml(reseller.email)}</td>
+                <td><strong>${userCount}</strong>/${maxUsers}</td>
+                <td><span class="status-badge ${reseller.status}">${reseller.status}</span></td>
+                <td>${reseller.expiryDate ? formatDate(reseller.expiryDate) : 'N/A'}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="action-btn" onclick="extendReseller('${reseller.id}')" title="Extend Subscription">
+                            <i class="fas fa-calendar-plus"></i>
+                        </button>
+                        <button class="action-btn ${reseller.status === 'active' ? 'ban' : 'approve'}" 
+                                onclick="toggleResellerStatus('${reseller.id}')" 
+                                title="${reseller.status === 'active' ? 'Suspend' : 'Activate'}">
+                            <i class="fas fa-${reseller.status === 'active' ? 'ban' : 'check'}"></i>
+                        </button>
+                        <button class="action-btn" onclick="viewResellerDetails('${reseller.id}')" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Add Reseller
+function addReseller() {
+    const name = prompt('Enter reseller name:');
+    if (!name) return;
+
+    const email = prompt('Enter reseller email:');
+    if (!email) return;
+
+    const password = prompt('Enter reseller password:');
+    if (!password) return;
+
+    // Check if email exists
+    if (AdminState.users.find(u => u.email === email)) {
+        showToast('Email already registered', 'error');
+        return;
+    }
+
+    const newReseller = {
+        id: 'reseller_' + Date.now(),
+        name: name,
+        email: email,
+        password: password,
+        role: 'reseller',
+        status: 'active',
+        plan: 'reseller',
+        maxUsers: 10,
+        expiryDate: getDefaultExpiryDate(),
+        createdAt: new Date().toISOString()
+    };
+
+    AdminState.users.push(newReseller);
+    saveUsers();
+    renderResellersTable();
+    showToast(`Reseller ${name} added successfully`, 'success');
+}
+
+// Extend Reseller Subscription
+function extendReseller(resellerId) {
+    const reseller = AdminState.users.find(u => u.id === resellerId);
+    if (!reseller) return;
+
+    const days = prompt('Extend by how many days?', '30');
+    if (!days) return;
+
+    const currentExpiry = new Date(reseller.expiryDate || new Date());
+    currentExpiry.setDate(currentExpiry.getDate() + parseInt(days));
+    reseller.expiryDate = currentExpiry.toISOString();
+
+    saveUsers();
+    renderResellersTable();
+    showToast(`Subscription extended by ${days} days`, 'success');
+}
+
+// Toggle Reseller Status
+function toggleResellerStatus(resellerId) {
+    const reseller = AdminState.users.find(u => u.id === resellerId);
+    if (!reseller) return;
+
+    reseller.status = reseller.status === 'active' ? 'suspended' : 'active';
+    saveUsers();
+    renderResellersTable();
+    showToast(`Reseller ${reseller.name} ${reseller.status}`, 'success');
+}
+
+// View Reseller Details
+function viewResellerDetails(resellerId) {
+    const reseller = AdminState.users.find(u => u.id === resellerId);
+    if (!reseller) return;
+
+    const users = AdminState.users.filter(u => u.resellerId === resellerId);
+    
+    const modal = document.getElementById('userModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    modalTitle.textContent = 'Reseller Details';
+    modalBody.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: 600;">
+                    ${getInitials(reseller.name)}
+                </div>
+                <div>
+                    <h3 style="font-size: 1.25rem; color: var(--text-primary);">${escapeHtml(reseller.name)}</h3>
+                    <p style="color: var(--text-muted);">${escapeHtml(reseller.email)}</p>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Status</label>
+                    <span class="status-badge ${reseller.status}">${reseller.status}</span>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Users</label>
+                    <span style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">${users.length}/${reseller.maxUsers || 10}</span>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Expiry Date</label>
+                    <span style="font-size: 0.9rem; color: var(--text-primary);">${formatDate(reseller.expiryDate)}</span>
+                </div>
+                <div style="padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Plan</label>
+                    <span style="font-size: 0.9rem; color: var(--text-primary);">Reseller (Rp50K/month)</span>
+                </div>
+            </div>
+            
+            <h4 style="color: var(--text-primary); margin-top: 16px;">Managed Users (${users.length})</h4>
+            <div style="max-height: 200px; overflow-y: auto;">
+                ${users.length === 0 ? '<p style="color: var(--text-muted);">No users yet</p>' : 
+                    users.map(user => `
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 8px; background: var(--bg-tertiary); border-radius: var(--radius-md); margin-bottom: 8px;">
+                            <div style="width: 32px; height: 32px; background: var(--bg-hover); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.75rem;">
+                                ${getInitials(user.name)}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.85rem; color: var(--text-primary);">${escapeHtml(user.name)}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(user.email)}</div>
+                            </div>
+                            <span class="status-badge ${user.status}">${user.status}</span>
+                        </div>
+                    `).join('')
+                }
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
+}
+
+// Get Default Expiry Date
+function getDefaultExpiryDate() {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString();
+}
+
+/* ========================================
+   Pricing Management
+   ======================================== */
+
+// Load Pricing Config
+function loadPricingConfig() {
+    const savedPricing = localStorage.getItem('pricingConfig');
+    if (savedPricing) {
+        const config = JSON.parse(savedPricing);
+        
+        // Update form fields
+        if (config.free) {
+            document.getElementById('limitFree').value = config.free.dailyLimit || 5;
+        }
+        if (config.basic) {
+            document.getElementById('priceBasic').value = config.basic.price || 10000;
+            document.getElementById('limitBasic').value = config.basic.dailyLimit || 100;
+        }
+        if (config.pro) {
+            document.getElementById('pricePro').value = config.pro.price || 20000;
+            document.getElementById('limitPro').value = config.pro.dailyLimit || 500;
+        }
+        if (config.premium) {
+            document.getElementById('pricePremium').value = config.premium.price || 35000;
+            document.getElementById('limitPremium').value = config.premium.dailyLimit || -1;
+        }
+        if (config.reseller) {
+            document.getElementById('priceReseller').value = config.reseller.price || 50000;
+            document.getElementById('maxUsersReseller').value = config.reseller.maxUsers || 10;
+        }
+    }
+}
+
+// Save Pricing Config
+function savePricingConfig() {
+    const config = {
+        free: {
+            price: 0,
+            dailyLimit: parseInt(document.getElementById('limitFree').value) || 5
+        },
+        basic: {
+            price: parseInt(document.getElementById('priceBasic').value) || 10000,
+            dailyLimit: parseInt(document.getElementById('limitBasic').value) || 100
+        },
+        pro: {
+            price: parseInt(document.getElementById('pricePro').value) || 20000,
+            dailyLimit: parseInt(document.getElementById('limitPro').value) || 500
+        },
+        premium: {
+            price: parseInt(document.getElementById('pricePremium').value) || 35000,
+            dailyLimit: parseInt(document.getElementById('limitPremium').value) || -1
+        },
+        reseller: {
+            price: parseInt(document.getElementById('priceReseller').value) || 50000,
+            maxUsers: parseInt(document.getElementById('maxUsersReseller').value) || 10
+        }
+    };
+
+    localStorage.setItem('pricingConfig', JSON.stringify(config));
+    showToast('Pricing configuration saved', 'success');
+    logAdminAction('pricing_update', 'Admin updated pricing configuration');
+}
+
+/* ========================================
+   Add Event Listeners for New Features
+   ======================================== */
+
+// Add to setupAdminEventListeners
+const originalSetupAdminEventListeners = setupAdminEventListeners;
+setupAdminEventListeners = function() {
+    originalSetupAdminEventListeners();
+    
+    // Add Reseller Button
+    const addResellerBtn = document.getElementById('addResellerBtn');
+    if (addResellerBtn) {
+        addResellerBtn.addEventListener('click', addReseller);
+    }
+    
+    // Save Pricing Button
+    const savePricingBtn = document.getElementById('savePricingBtn');
+    if (savePricingBtn) {
+        savePricingBtn.addEventListener('click', savePricingConfig);
+    }
+};
+
+// Add to navigateToSection
+const originalNavigateToSection = navigateToSection;
+navigateToSection = function(section) {
+    originalNavigateToSection(section);
+    
+    // Handle new sections
+    if (section === 'resellers') {
+        renderResellersTable();
+    } else if (section === 'pricing') {
+        loadPricingConfig();
+    }
+};
+
+// Add to updateUserCounts
+const originalUpdateUserCounts = updateUserCounts;
+updateUserCounts = function() {
+    originalUpdateUserCounts();
+    
+    // Update reseller count
+    const resellers = AdminState.users.filter(u => u.role === 'reseller');
+    const resellerBadge = document.getElementById('resellerCountBadge');
+    if (resellerBadge) resellerBadge.textContent = resellers.length;
+};

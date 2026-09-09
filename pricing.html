@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - AI Chat Assistant</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/pricing.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="pricing-page">
+    <!-- Navbar -->
+    <nav class="pricing-nav">
+        <div class="nav-brand">
+            <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat" class="nav-logo">
+            <span>AI Chat Assistant</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Chat</a>
+            <a href="pricing.html" class="active">Pricing</a>
+            <a href="login.html" class="nav-btn">Login</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pricing-hero">
+        <h1>Simple, Transparent Pricing</h1>
+        <p>Choose the plan that fits your needs. Start free, upgrade anytime.</p>
+        
+        <!-- Billing Toggle -->
+        <div class="billing-toggle">
+            <span class="active" id="monthlyLabel">Monthly</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="billingToggle">
+                <span class="toggle-slider"></span>
+            </label>
+            <span id="yearlyLabel">Yearly <span class="save-badge">Save 20%</span></span>
+        </div>
+    </section>
+
+    <!-- Pricing Cards -->
+    <section class="pricing-section">
+        <div class="pricing-grid">
+            <!-- Free Tier -->
+            <div class="pricing-card">
+                <div class="card-header">
+                    <span class="plan-badge free">Free</span>
+                    <h2 class="plan-name">Starter</h2>
+                    <div class="plan-price">
+                        <span class="currency">Rp</span>
+                        <span class="amount">0</span>
+                        <span class="period">/forever</span>
+                    </div>
+                    <p class="plan-desc">Perfect for trying out AI Chat Assistant</p>
+                </div>
+                <div class="card-body">
+                    <div class="rate-limit">
+                        <i class="fas fa-bolt"></i>
+                        <span><strong>5</strong> messages per day</span>
+                    </div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> Access to ChatGPT</li>
+                        <li><i class="fas fa-check"></i> Basic AI responses</li>
+                        <li><i class="fas fa-check"></i> Chat history</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Other AI models</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Image generation</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Tools access</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Downloaders</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Priority support</li>
+                    </ul>
+                    <a href="register.html" class="plan-btn free-btn">Get Started Free</a>
+                </div>
+            </div>
+
+            <!-- Basic Tier -->
+            <div class="pricing-card">
+                <div class="card-header">
+                    <span class="plan-badge basic">Basic</span>
+                    <h2 class="plan-name">Pay Per Chat</h2>
+                    <div class="plan-price">
+                        <span class="currency">Rp</span>
+                        <span class="amount">10</span>
+                        <span class="suffix">K</span>
+                        <span class="period">/chat</span>
+                    </div>
+                    <p class="plan-desc">Pay only for what you use</p>
+                </div>
+                <div class="card-body">
+                    <div class="rate-limit">
+                        <i class="fas fa-bolt"></i>
+                        <span><strong>100</strong> messages per day</span>
+                    </div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> All AI Models</li>
+                        <li><i class="fas fa-check"></i> ChatGPT, Gemini, Claude</li>
+                        <li><i class="fas fa-check"></i> Copilot, Mistral, Felo</li>
+                        <li><i class="fas fa-check"></i> TurboSeek, Apertus</li>
+                        <li><i class="fas fa-check"></i> Tools access</li>
+                        <li><i class="fas fa-check"></i> Downloaders</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Image generation</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Priority support</li>
+                    </ul>
+                    <a href="register.html?plan=basic" class="plan-btn basic-btn">Choose Basic</a>
+                </div>
+            </div>
+
+            <!-- Pro Tier -->
+            <div class="pricing-card popular">
+                <div class="popular-badge">Most Popular</div>
+                <div class="card-header">
+                    <span class="plan-badge pro">Pro</span>
+                    <h2 class="plan-name">Monthly</h2>
+                    <div class="plan-price">
+                        <span class="currency">Rp</span>
+                        <span class="amount">20</span>
+                        <span class="suffix">K</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <p class="plan-desc">Best for regular users</p>
+                </div>
+                <div class="card-body">
+                    <div class="rate-limit">
+                        <i class="fas fa-bolt"></i>
+                        <span><strong>500</strong> messages per day</span>
+                    </div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> All AI Models</li>
+                        <li><i class="fas fa-check"></i> ChatGPT, Gemini, Claude</li>
+                        <li><i class="fas fa-check"></i> Copilot, Mistral, Felo</li>
+                        <li><i class="fas fa-check"></i> TurboSeek, Apertus</li>
+                        <li><i class="fas fa-check"></i> <strong>Image Generation</strong></li>
+                        <li><i class="fas fa-check"></i> All Tools</li>
+                        <li><i class="fas fa-check"></i> All Downloaders</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Priority support</li>
+                    </ul>
+                    <a href="register.html?plan=pro" class="plan-btn pro-btn">Choose Pro</a>
+                </div>
+            </div>
+
+            <!-- Premium Tier -->
+            <div class="pricing-card">
+                <div class="card-header">
+                    <span class="plan-badge premium">Premium</span>
+                    <h2 class="plan-name">Premium</h2>
+                    <div class="plan-price">
+                        <span class="currency">Rp</span>
+                        <span class="amount">35</span>
+                        <span class="suffix">K</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <p class="plan-desc">For power users who need more</p>
+                </div>
+                <div class="card-body">
+                    <div class="rate-limit">
+                        <i class="fas fa-bolt"></i>
+                        <span><strong>Unlimited</strong> messages</span>
+                    </div>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> All AI Models</li>
+                        <li><i class="fas fa-check"></i> ChatGPT, Gemini, Claude</li>
+                        <li><i class="fas fa-check"></i> Copilot, Mistral, Felo</li>
+                        <li><i class="fas fa-check"></i> TurboSeek, Apertus</li>
+                        <li><i class="fas fa-check"></i> <strong>Image Generation</strong></li>
+                        <li><i class="fas fa-check"></i> All Tools</li>
+                        <li><i class="fas fa-check"></i> All Downloaders</li>
+                        <li><i class="fas fa-check"></i> <strong>Priority Support</strong></li>
+                    </ul>
+                    <a href="register.html?plan=premium" class="plan-btn premium-btn">Choose Premium</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reseller Section -->
+        <div class="reseller-section">
+            <div class="reseller-card">
+                <div class="reseller-badge">Reseller Program</div>
+                <div class="reseller-content">
+                    <div class="reseller-info">
+                        <h2>Become a Reseller</h2>
+                        <p>Sell AI Chat subscriptions to your customers. Manage up to <strong>10 user accounts</strong> per reseller license.</p>
+                        <div class="reseller-price">
+                            <span class="currency">Rp</span>
+                            <span class="amount">50</span>
+                            <span class="suffix">K</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <div class="reseller-features">
+                        <h3>Reseller Benefits</h3>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Manage up to 10 user accounts</li>
+                            <li><i class="fas fa-check"></i> Create/Deactivate user accounts</li>
+                            <li><i class="fas fa-check"></i> Assign Pro subscription to users</li>
+                            <li><i class="fas fa-check"></i> Dedicated reseller dashboard</li>
+                            <li><i class="fas fa-check"></i> Usage analytics for your users</li>
+                            <li><i class="fas fa-check"></i> Bulk user management</li>
+                        </ul>
+                    </div>
+                </div>
+                <a href="register.html?plan=reseller" class="plan-btn reseller-btn">Become a Reseller</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-grid">
+            <div class="faq-item">
+                <h3>What happens when I reach my daily limit?</h3>
+                <p>You'll need to wait until the next day for your messages to reset, or upgrade your plan for more messages.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Can I upgrade my plan anytime?</h3>
+                <p>Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+            </div>
+            <div class="faq-item">
+                <h3>What payment methods do you accept?</h3>
+                <p>We accept bank transfer, e-wallets (GoPay, OVO, Dana), and QRIS.</p>
+            </div>
+            <div class="faq-item">
+                <h3>How does the reseller program work?</h3>
+                <p>Resellers pay Rp50K/month and can manage up to 10 user accounts with Pro features.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="pricing-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI Chat">
+                <span>AI Chat Assistant</span>
+            </div>
+            <p>&copy; Created Mazz-Vall. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/pricing.js"></script>
+</body>
+</html>
