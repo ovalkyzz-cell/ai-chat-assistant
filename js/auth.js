@@ -70,12 +70,17 @@ function setupLoginForm() {
         }
 
         if (user.status === 'banned') {
-            showToast('Your account has been banned', 'error');
+            showToast('Your account has been banned. Please contact admin.', 'error');
             return;
         }
 
         if (user.status === 'pending') {
-            showToast('Your account is pending approval', 'warning');
+            showToast('Your account is pending admin approval. Please wait before logging in.', 'warning');
+            return;
+        }
+
+        if (user.status !== 'active') {
+            showToast('Your account is not active. Please contact admin.', 'error');
             return;
         }
 
@@ -150,8 +155,8 @@ function setupRegisterForm() {
             email: email,
             password: password, // In production, hash this!
             role: 'user',
-            status: 'active', // Active immediately
-            plan: 'free', // Free plan by default
+            status: 'pending', // Requires admin approval
+            plan: 'free',
             createdAt: new Date().toISOString(),
             lastLogin: null
         };
@@ -159,14 +164,11 @@ function setupRegisterForm() {
         users.push(newUser);
         localStorage.setItem('users', JSON.stringify(users));
 
-        // Auto login after registration
-        localStorage.setItem('currentUser', JSON.stringify(newUser));
-
-        showToast('Registration successful! Welcome!', 'success');
+        showToast('Registration successful! Please wait for admin approval before logging in.', 'success');
         
         setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
+            window.location.href = 'login.html';
+        }, 2000);
     });
 }
 
@@ -246,7 +248,8 @@ function handleGoogleAuth(type) {
         avatar: null,
         provider: 'google',
         role: 'user',
-        status: 'pending',
+        status: 'pending', // Requires admin approval
+        plan: 'free',
         createdAt: new Date().toISOString(),
         lastLogin: null
     };
@@ -258,7 +261,17 @@ function handleGoogleAuth(type) {
     if (existingUser) {
         // Login existing user
         if (existingUser.status === 'banned') {
-            showToast('Your account has been banned', 'error');
+            showToast('Your account has been banned. Please contact admin.', 'error');
+            return;
+        }
+
+        if (existingUser.status === 'pending') {
+            showToast('Your account is pending admin approval. Please wait before logging in.', 'warning');
+            return;
+        }
+
+        if (existingUser.status !== 'active') {
+            showToast('Your account is not active. Please contact admin.', 'error');
             return;
         }
 
@@ -267,18 +280,21 @@ function handleGoogleAuth(type) {
         localStorage.setItem('currentUser', JSON.stringify(existingUser));
         
         showToast('Welcome back!', 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 1000);
     } else {
-        // Register new user
+        // Register new user - requires admin approval
         users.push(mockGoogleUser);
         localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', JSON.stringify(mockGoogleUser));
         
-        showToast('Account created! Please wait for admin approval.', 'success');
+        showToast('Google account registered! Please wait for admin approval before logging in.', 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 2000);
     }
-
-    setTimeout(() => {
-        window.location.href = type === 'login' ? 'index.html' : 'login.html';
-    }, 1500);
 }
 
 // ========================================

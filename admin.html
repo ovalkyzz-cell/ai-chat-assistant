@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - AI Chat Assistant</title>
+    <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
     <link rel="stylesheet" href="css/admin.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -14,7 +15,7 @@
         <aside class="admin-sidebar">
             <div class="sidebar-header">
                 <div class="admin-brand">
-                    <i class="fas fa-shield-alt"></i>
+                    <img src="https://j.top4top.io/p_3903uecld0.png" alt="Admin" class="admin-logo">
                     <span>Admin Panel</span>
                 </div>
             </div>
@@ -43,6 +44,10 @@
                     <i class="fas fa-store"></i>
                     <span>Resellers</span>
                     <span class="badge" id="resellerCountBadge">0</span>
+                </a>
+                <a href="#discounts" class="nav-item" data-section="discounts">
+                    <i class="fas fa-tag"></i>
+                    <span>Discount Codes</span>
                 </a>
                 <a href="#pricing" class="nav-item" data-section="pricing">
                     <i class="fas fa-tags"></i>
@@ -301,6 +306,36 @@
                             </thead>
                             <tbody id="resellersTableBody">
                                 <!-- Resellers will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Discount Codes Section -->
+                <section class="content-section" id="discountsSection">
+                    <div class="section-header">
+                        <h2>Discount Codes</h2>
+                        <button class="btn btn-primary" id="addDiscountBtn">
+                            <i class="fas fa-plus"></i> Create Discount Code
+                        </button>
+                    </div>
+                    <div class="discount-info">
+                        <p><i class="fas fa-info-circle"></i> Discount codes must start with <strong>GOVAL-</strong> format (e.g., GOVAL-2024)</p>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Discount</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="discountsTableBody">
+                                <!-- Discount codes will be inserted here -->
                             </tbody>
                         </table>
                     </div>

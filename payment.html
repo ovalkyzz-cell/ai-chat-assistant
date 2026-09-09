@@ -115,6 +115,16 @@
                     <label>Description (Optional)</label>
                     <input type="text" id="paymentDesc" placeholder="Payment for...">
                 </div>
+                <div class="form-group">
+                    <label>Discount Code (Optional)</label>
+                    <div class="discount-input-group">
+                        <input type="text" id="discountCode" placeholder="GOVAL-XXXX" style="text-transform: uppercase;">
+                        <button type="button" class="apply-discount-btn" onclick="applyDiscount()">
+                            <i class="fas fa-tag"></i> Apply
+                        </button>
+                    </div>
+                    <small class="discount-hint" id="discountHint"></small>
+                </div>
 
                 <div class="order-summary">
                     <h3>Order Summary</h3>
@@ -125,6 +135,10 @@
                     <div class="summary-row">
                         <span>Price</span>
                         <span id="summaryPrice">-</span>
+                    </div>
+                    <div class="summary-row discount-row" id="discountRow" style="display: none;">
+                        <span>Discount</span>
+                        <span id="summaryDiscount" style="color: #10a37f;">-</span>
                     </div>
                     <div class="summary-row">
                         <span>Fee</span>

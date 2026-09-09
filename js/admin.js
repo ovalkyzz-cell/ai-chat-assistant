@@ -1063,3 +1063,191 @@ updateUserCounts = function() {
     const resellerBadge = document.getElementById('resellerCountBadge');
     if (resellerBadge) resellerBadge.textContent = resellers.length;
 };
+
+/* ========================================
+   Discount Code Management
+   ======================================== */
+
+// Discount codes storage key
+const DISCOUNT_CODES_KEY = 'discountCodes';
+
+// Initialize discount codes
+function initDiscountCodes() {
+    const existing = localStorage.getItem(DISCOUNT_CODES_KEY);
+    if (!existing) {
+        const defaultCodes = [
+            { code: 'GOVAL-2024', discount: 10, type: 'percent', active: true, createdAt: new Date().toISOString() },
+            { code: 'GOVAL-WELCOME', discount: 5000, type: 'fixed', active: true, createdAt: new Date().toISOString() }
+        ];
+        localStorage.setItem(DISCOUNT_CODES_KEY, JSON.stringify(defaultCodes));
+    }
+}
+
+// Get discount codes
+function getDiscountCodes() {
+    return JSON.parse(localStorage.getItem(DISCOUNT_CODES_KEY) || '[]');
+}
+
+// Save discount codes
+function saveDiscountCodes(codes) {
+    localStorage.setItem(DISCOUNT_CODES_KEY, JSON.stringify(codes));
+}
+
+// Render discount codes table
+function renderDiscountsTable() {
+    const tbody = document.getElementById('discountsTableBody');
+    if (!tbody) return;
+
+    const codes = getDiscountCodes();
+
+    if (codes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No discount codes created yet</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = codes.map(code => `
+        <tr>
+            <td><strong>${code.code}</strong></td>
+            <td>${code.type === 'percent' ? code.discount + '%' : 'Rp' + code.discount.toLocaleString()}</td>
+            <td>${code.type === 'percent' ? 'Percentage' : 'Fixed Amount'}</td>
+            <td><span class="status-badge ${code.active ? 'active' : 'inactive'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${new Date(code.createdAt).toLocaleDateString()}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary" onclick="toggleDiscountCode('${code.code}')">
+                    <i class="fas fa-${code.active ? 'ban' : 'check'}"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteDiscountCode('${code.code}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Add discount code
+function addDiscountCode() {
+    const code = document.getElementById('newDiscountCode')?.value.trim().toUpperCase();
+    const discount = parseInt(document.getElementById('newDiscountValue')?.value);
+    const type = document.getElementById('newDiscountType')?.value || 'percent';
+
+    if (!code) {
+        showToast('Please enter a discount code', 'warning');
+        return;
+    }
+
+    if (!code.startsWith('GOVAL-')) {
+        showToast('Code must start with GOVAL-', 'warning');
+        return;
+    }
+
+    if (!discount || discount <= 0) {
+        showToast('Please enter a valid discount value', 'warning');
+        return;
+    }
+
+    const codes = getDiscountCodes();
+    if (codes.find(c => c.code === code)) {
+        showToast('Code already exists', 'error');
+        return;
+    }
+
+    codes.push({
+        code: code,
+        discount: discount,
+        type: type,
+        active: true,
+        createdAt: new Date().toISOString()
+    });
+
+    saveDiscountCodes(codes);
+    renderDiscountsTable();
+    showToast('Discount code created successfully', 'success');
+    logAdminAction('discount_create', `Admin created discount code: ${code}`);
+
+    // Clear inputs
+    if (document.getElementById('newDiscountCode')) {
+        document.getElementById('newDiscountCode').value = '';
+    }
+    if (document.getElementById('newDiscountValue')) {
+        document.getElementById('newDiscountValue').value = '';
+    }
+}
+
+// Toggle discount code status
+function toggleDiscountCode(code) {
+    const codes = getDiscountCodes();
+    const codeObj = codes.find(c => c.code === code);
+    if (codeObj) {
+        codeObj.active = !codeObj.active;
+        saveDiscountCodes(codes);
+        renderDiscountsTable();
+        showToast(`Discount code ${codeObj.active ? 'activated' : 'deactivated'}`, 'success');
+        logAdminAction('discount_toggle', `Admin ${codeObj.active ? 'activated' : 'deactivated'} discount code: ${code}`);
+    }
+}
+
+// Delete discount code
+function deleteDiscountCode(code) {
+    if (!confirm('Are you sure you want to delete this discount code?')) return;
+    
+    const codes = getDiscountCodes();
+    const filtered = codes.filter(c => c.code !== code);
+    saveDiscountCodes(filtered);
+    renderDiscountsTable();
+    showToast('Discount code deleted', 'success');
+    logAdminAction('discount_delete', `Admin deleted discount code: ${code}`);
+}
+
+// Add discount button event listener
+const originalSetupAdminEventListeners2 = setupAdminEventListeners;
+setupAdminEventListeners = function() {
+    originalSetupAdminEventListeners2();
+    
+    // Add Discount Button
+    const addDiscountBtn = document.getElementById('addDiscountBtn');
+    if (addDiscountBtn) {
+        addDiscountBtn.addEventListener('click', () => {
+            // Show modal or inline form
+            const code = prompt('Enter discount code (must start with GOVAL-):');
+            if (!code) return;
+            
+            const discount = prompt('Enter discount value:');
+            if (!discount) return;
+            
+            const type = confirm('Click OK for percentage discount, Cancel for fixed amount:') ? 'percent' : 'fixed';
+            
+            const codes = getDiscountCodes();
+            if (codes.find(c => c.code === code.toUpperCase())) {
+                showToast('Code already exists', 'error');
+                return;
+            }
+            
+            codes.push({
+                code: code.toUpperCase(),
+                discount: parseInt(discount),
+                type: type,
+                active: true,
+                createdAt: new Date().toISOString()
+            });
+            
+            saveDiscountCodes(codes);
+            renderDiscountsTable();
+            showToast('Discount code created successfully', 'success');
+            logAdminAction('discount_create', `Admin created discount code: ${code.toUpperCase()}`);
+        });
+    }
+};
+
+// Add to navigateToSection
+const originalNavigateToSection2 = navigateToSection;
+navigateToSection = function(section) {
+    originalNavigateToSection2(section);
+    
+    // Handle discount section
+    if (section === 'discounts') {
+        renderDiscountsTable();
+    }
+};
+
+// Initialize discount codes
+initDiscountCodes();

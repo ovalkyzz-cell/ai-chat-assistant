@@ -131,6 +131,14 @@ input, textarea {
     color: var(--text-primary);
 }
 
+.admin-brand img,
+.admin-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-lg);
+    object-fit: contain;
+}
+
 .admin-brand i {
     width: 40px;
     height: 40px;

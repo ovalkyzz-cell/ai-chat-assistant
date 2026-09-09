@@ -130,8 +130,23 @@ function updateOrderSummary() {
 
     document.getElementById('summaryPlan').textContent = `${plan.name} Plan`;
     document.getElementById('summaryPrice').textContent = formatPrice(plan.price);
+    
+    // Apply discount if any
+    let total = plan.price;
+    const discountRow = document.getElementById('discountRow');
+    const discountEl = document.getElementById('summaryDiscount');
+    
+    if (PaymentState.discount) {
+        discountRow.style.display = 'flex';
+        discountEl.textContent = `-${formatPrice(PaymentState.discount.amount)}`;
+        total = plan.price - PaymentState.discount.amount;
+        if (total < 0) total = 0;
+    } else {
+        discountRow.style.display = 'none';
+    }
+    
     document.getElementById('summaryFee').textContent = 'Rp0';
-    document.getElementById('summaryTotal').textContent = formatPrice(plan.price);
+    document.getElementById('summaryTotal').textContent = formatPrice(total);
 }
 
 // Validate Form
@@ -166,12 +181,27 @@ async function createQRISTransaction() {
     const password = document.getElementById('customerPassword').value;
     const description = document.getElementById('paymentDesc').value.trim() || 
                        `Payment for ${plan.name} Plan - AI Chat Assistant`;
+    const discountCode = document.getElementById('discountCode')?.value.trim() || '';
 
     // Go to step 3
     goToStep(3);
     document.getElementById('qrisTotalAmount').textContent = formatPrice(plan.price);
 
+    // Show loading state
+    const qrContainer = document.getElementById('qrisCode');
+    qrContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div class="spinner" style="margin: 0 auto 16px;"></div>
+            <p style="color: #666;">Generating QR Code...</p>
+        </div>
+    `;
+
     try {
+        // Check if QRIS config is set
+        if (!QRIS_CONFIG.accountId || !QRIS_CONFIG.secretToken) {
+            throw new Error('QRIS configuration not set. Please contact admin.');
+        }
+
         const response = await fetch(QRIS_CONFIG.baseUrl, {
             method: 'POST',
             headers: {
@@ -189,6 +219,7 @@ async function createQRISTransaction() {
         });
 
         const data = await response.json();
+        console.log('QRIS Response:', data);
 
         if (data.success && data.data) {
             PaymentState.transactionId = data.data.transaction_id;
@@ -215,11 +246,34 @@ async function createQRISTransaction() {
 
             showToast('QR Code generated successfully', 'success');
         } else {
-            throw new Error(data.message || 'Failed to create transaction');
+            throw new Error(data.message || data.error || 'Failed to create transaction');
         }
     } catch (error) {
         console.error('QRIS Error:', error);
-        showToast('Failed to create QR Code. Please try again.', 'error');
+        
+        // Show user-friendly error message
+        let errorMessage = 'Failed to create QR Code. ';
+        if (error.message.includes('configuration')) {
+            errorMessage += 'Payment system not configured. Please contact admin.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+            errorMessage += 'Network error. Please check your connection.';
+        } else {
+            errorMessage += 'Please try again or contact admin.';
+        }
+        
+        showToast(errorMessage, 'error');
+        
+        // Show error in QR container
+        qrContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                <p style="margin-bottom: 16px;">${errorMessage}</p>
+                <button onclick="createQRISTransaction()" class="btn-retry" style="padding: 10px 20px; background: #10a37f; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-redo"></i> Try Again
+                </button>
+            </div>
+        `;
+        
         goToStep(2);
     }
 }
@@ -484,3 +538,151 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 }
+
+// ========================================
+// Discount Code System
+// ========================================
+
+// Discount codes storage (admin can create these)
+const DISCOUNT_CODES_KEY = 'discountCodes';
+
+// Initialize discount codes
+function initDiscountCodes() {
+    const existing = localStorage.getItem(DISCOUNT_CODES_KEY);
+    if (!existing) {
+        // Default discount codes
+        const defaultCodes = [
+            { code: 'GOVAL-2024', discount: 10, type: 'percent', active: true, createdAt: new Date().toISOString() },
+            { code: 'GOVAL-WELCOME', discount: 5000, type: 'fixed', active: true, createdAt: new Date().toISOString() }
+        ];
+        localStorage.setItem(DISCOUNT_CODES_KEY, JSON.stringify(defaultCodes));
+    }
+}
+
+// Apply Discount Code
+function applyDiscount() {
+    const codeInput = document.getElementById('discountCode');
+    const hintEl = document.getElementById('discountHint');
+    const code = codeInput.value.trim().toUpperCase();
+
+    if (!code) {
+        hintEl.textContent = 'Please enter a discount code';
+        hintEl.style.color = '#e74c3c';
+        return;
+    }
+
+    // Validate GOVAL-XXXX format
+    if (!code.startsWith('GOVAL-')) {
+        hintEl.textContent = 'Invalid format. Code must start with GOVAL-';
+        hintEl.style.color = '#e74c3c';
+        return;
+    }
+
+    // Get discount codes
+    const codes = JSON.parse(localStorage.getItem(DISCOUNT_CODES_KEY) || '[]');
+    const discountCode = codes.find(c => c.code === code && c.active);
+
+    if (!discountCode) {
+        hintEl.textContent = 'Invalid or expired discount code';
+        hintEl.style.color = '#e74c3c';
+        return;
+    }
+
+    // Calculate discount
+    const plan = PLAN_DETAILS[PaymentState.selectedPlan];
+    if (!plan) {
+        hintEl.textContent = 'Please select a plan first';
+        hintEl.style.color = '#e74c3c';
+        return;
+    }
+
+    let discountAmount = 0;
+    if (discountCode.type === 'percent') {
+        discountAmount = Math.floor(plan.price * (discountCode.discount / 100));
+    } else {
+        discountAmount = discountCode.discount;
+    }
+
+    // Store discount
+    PaymentState.discount = {
+        code: discountCode.code,
+        amount: discountAmount,
+        type: discountCode.type,
+        value: discountCode.discount
+    };
+
+    // Update UI
+    hintEl.textContent = `Discount applied! -${formatPrice(discountAmount)}`;
+    hintEl.style.color = '#10a37f';
+
+    // Update order summary
+    updateOrderSummary();
+
+    showToast('Discount code applied successfully!', 'success');
+}
+
+// Validate Discount Code Format
+function isValidDiscountCode(code) {
+    return /^GOVAL-[A-Z0-9]{4,}$/.test(code);
+}
+
+// Get Discount Codes (for admin)
+function getDiscountCodes() {
+    return JSON.parse(localStorage.getItem(DISCOUNT_CODES_KEY) || '[]');
+}
+
+// Save Discount Codes (for admin)
+function saveDiscountCodes(codes) {
+    localStorage.setItem(DISCOUNT_CODES_KEY, JSON.stringify(codes));
+}
+
+// Create Discount Code (for admin)
+function createDiscountCode(code, discount, type = 'percent') {
+    const codes = getDiscountCodes();
+    
+    // Validate format
+    if (!code.startsWith('GOVAL-')) {
+        return { success: false, message: 'Code must start with GOVAL-' };
+    }
+
+    // Check if exists
+    if (codes.find(c => c.code === code)) {
+        return { success: false, message: 'Code already exists' };
+    }
+
+    const newCode = {
+        code: code.toUpperCase(),
+        discount: discount,
+        type: type,
+        active: true,
+        createdAt: new Date().toISOString()
+    };
+
+    codes.push(newCode);
+    saveDiscountCodes(codes);
+
+    return { success: true, message: 'Discount code created' };
+}
+
+// Delete Discount Code (for admin)
+function deleteDiscountCode(code) {
+    const codes = getDiscountCodes();
+    const filtered = codes.filter(c => c.code !== code);
+    saveDiscountCodes(filtered);
+    return { success: true, message: 'Discount code deleted' };
+}
+
+// Toggle Discount Code (for admin)
+function toggleDiscountCode(code) {
+    const codes = getDiscountCodes();
+    const codeObj = codes.find(c => c.code === code);
+    if (codeObj) {
+        codeObj.active = !codeObj.active;
+        saveDiscountCodes(codes);
+        return { success: true, message: `Discount code ${codeObj.active ? 'activated' : 'deactivated'}` };
+    }
+    return { success: false, message: 'Code not found' };
+}
+
+// Initialize discount codes on page load
+initDiscountCodes();
