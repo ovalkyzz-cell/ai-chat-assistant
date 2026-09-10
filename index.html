@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>body{opacity:0;transition:opacity .3s}body.ready{opacity:1}</style>
 </head>
 <body>
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-logo">
@@ -29,7 +29,6 @@
                 <button class="nav-tab" data-tab="downloaders"><i class="fas fa-download"></i><span>Downloaders</span></button>
             </div>
 
-            <!-- Chats Panel -->
             <div class="sidebar-panel" id="chatsPanel">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
@@ -40,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Tools Panel -->
             <div class="sidebar-panel hidden" id="toolsPanel">
                 <div class="panel-list">
                     <div class="tool-item" data-tool="cek-nomor"><i class="fas fa-phone"></i><span>Cek Nomor</span></div>
@@ -50,7 +48,6 @@
                 </div>
             </div>
 
-            <!-- Downloaders Panel -->
             <div class="sidebar-panel hidden" id="downloadersPanel">
                 <div class="panel-list">
                     <div class="tool-item" data-downloader="instagram"><i class="fab fa-instagram"></i><span>Instagram</span></div>
@@ -64,7 +61,6 @@
                 </div>
             </div>
 
-            <!-- Tool Interface -->
             <div class="sidebar-panel hidden" id="toolInterface">
                 <div class="tool-interface-header">
                     <button class="back-btn" id="backToChat"><i class="fas fa-arrow-left"></i></button>
@@ -86,7 +82,6 @@
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
         <main class="main-content">
             <header class="main-header">
                 <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
@@ -111,7 +106,6 @@
             </header>
 
             <div class="chat-container" id="chatContainer">
-                <!-- Welcome Screen -->
                 <div class="welcome-screen" id="welcomeScreen">
                     <img src="https://j.top4top.io/p_3903uecld0.png" alt="AI" class="welcome-logo">
                     <h1>How can I help you today?</h1>
@@ -125,12 +119,9 @@
                         <div class="suggestion-card" data-prompt="Compare React vs Vue.js"><i class="fas fa-balance-scale"></i><span>React vs Vue.js</span></div>
                     </div>
                 </div>
-
-                <!-- Messages -->
                 <div class="messages-container" id="messagesContainer"></div>
             </div>
 
-            <!-- Recording Indicator -->
             <div class="recording-indicator" id="recordingIndicator">
                 <div class="recording-dot"></div>
                 <span>Recording...</span>
@@ -138,7 +129,6 @@
                 <button onclick="cancelRecording()" class="rec-cancel"><i class="fas fa-times"></i></button>
             </div>
 
-            <!-- Input Area -->
             <div class="input-area" id="inputArea">
                 <div class="attachment-preview" id="attachmentPreview" style="display:none"></div>
                 <div class="composer">
@@ -156,13 +146,6 @@
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
     <script src="js/chat.js"></script>
-    <script>
-    (function() {
-        var user = null;
-        try { user = JSON.parse(localStorage.getItem('mazval_user')); } catch(e) {}
-        if (!user) { window.location.href = 'login.html'; return; }
-        if (user.status !== 'approved' && user.role !== 'admin') { window.location.href = 'login.html'; return; }
-    })();
-    </script>
+    <script>document.body.classList.add('ready');</script>
 </body>
 </html>
