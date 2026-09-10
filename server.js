@@ -50,21 +50,28 @@ function writeDB(n, d) { inMemoryDB[n] = d; saveDB(); }
 function genId() { return crypto.randomBytes(16).toString('hex'); }
 function hashPw(p) { return crypto.createHash('sha256').update(p).digest('hex'); }
 
+// Token = userId + "_" + randomHex (sessionless, works on serverless)
+function createToken(userId) { return userId + '_' + genId(); }
+function getUserIdFromToken(token) {
+    if (!token) return null;
+    var parts = token.split('_');
+    if (parts.length < 2) return null;
+    return parts[0];
+}
+
 // ========================================
-// AUTH MIDDLEWARE
+// AUTH MIDDLEWARE (sessionless)
 // ========================================
 function auth(req, res, next) {
-    const h = req.headers.authorization;
+    var h = req.headers.authorization;
     if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token' } });
-    const token = h.split(' ')[1];
-    const sessions = readDB('sessions');
-    const s = sessions.find(x => x.token === token && !x.revoked);
-    if (!s) return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } });
-    const users = readDB('users');
-    const u = users.find(x => x.id === s.userId);
+    var token = h.split(' ')[1];
+    var userId = getUserIdFromToken(token);
+    if (!userId) return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } });
+    var users = readDB('users');
+    var u = users.find(function(x) { return x.id === userId; });
     if (!u) return res.status(401).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
     req.user = u;
-    req.session = s;
     next();
 }
 
@@ -102,27 +109,18 @@ app.post('/api/auth/login', (req, res) => {
             users.push(admin);
             writeDB('users', users);
         }
-        const token = genId();
-        const sessions = readDB('sessions');
-        sessions.push({ token, userId: admin.id, createdAt: new Date().toISOString() });
-        writeDB('sessions', sessions);
+        var token = createToken(admin.id);
         return res.json({ success: true, data: { token, user: { id: admin.id, name: admin.name, email: admin.email, role: admin.role, status: admin.status, plan: admin.plan } } });
     }
 
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (!user || user.password !== hashPw(password)) return res.status(401).json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } });
 
-    const token = genId();
-    const sessions = readDB('sessions');
-    sessions.push({ token, userId: user.id, createdAt: new Date().toISOString() });
-    writeDB('sessions', sessions);
+    var token = createToken(user.id);
     res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status, plan: user.plan } } });
 });
 
 app.post('/api/auth/logout', auth, (req, res) => {
-    const sessions = readDB('sessions');
-    const idx = sessions.findIndex(s => s.token === req.session.token);
-    if (idx !== -1) { sessions[idx].revoked = true; writeDB('sessions', sessions); }
     res.json({ success: true, data: { message: 'Logged out' } });
 });
 
