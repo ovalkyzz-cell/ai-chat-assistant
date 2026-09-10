@@ -1,4 +1,4 @@
-<script>var _au=localStorage.getItem('mazval_user');if(!_au){document.write('<script>location.href="login.html"<\/script>');throw'x';}try{var _u=JSON.parse(_au);if(_u.role==='admin'&&window.location.pathname.indexOf('admin')===-1){}if(_u.status!=='approved'&&_u.role!=='admin'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}catch(e){if(e!=='x'){document.write('<script>location.href="login.html"<\/script>');throw'x';}}</script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,6 @@
     <title>Mazval GPT AI</title>
     <link rel="icon" href="https://j.top4top.io/p_3903uecld0.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
@@ -77,8 +76,6 @@
 
             <div class="sidebar-footer">
                 <a href="pricing.html" class="sidebar-link" data-page="pricing"><i class="fas fa-crown"></i><span>Upgrade Plan</span></a>
-                <a href="#" class="sidebar-link" data-page="settings"><i class="fas fa-cog"></i><span>Settings</span></a>
-                <a href="#" class="sidebar-link" data-page="help"><i class="fas fa-question-circle"></i><span>Help</span></a>
                 <a href="admin.html" class="sidebar-link" id="adminLink" style="display:none"><i class="fas fa-shield-alt"></i><span>Admin Dashboard</span></a>
                 <div class="sidebar-divider"></div>
                 <div class="user-info" id="userInfo">
@@ -156,9 +153,16 @@
         </main>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
-    <script src="js/chat.js" defer></script>
+    <script src="js/chat.js"></script>
+    <script>
+    (function() {
+        var user = null;
+        try { user = JSON.parse(localStorage.getItem('mazval_user')); } catch(e) {}
+        if (!user) { window.location.href = 'login.html'; return; }
+        if (user.status !== 'approved' && user.role !== 'admin') { window.location.href = 'login.html'; return; }
+    })();
+    </script>
 </body>
 </html>
