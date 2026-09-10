@@ -778,12 +778,14 @@ input, textarea, select {
     background: linear-gradient(to top, var(--bg-primary) 80%, transparent);
 }
 
-.input-container {
+.input-container,
+.composer {
     max-width: 800px;
     margin: 0 auto;
     position: relative;
     display: flex;
     align-items: flex-end;
+    gap: 8px;
     background-color: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -791,12 +793,14 @@ input, textarea, select {
     transition: all var(--transition-fast);
 }
 
-.input-container:focus-within {
+.input-container:focus-within,
+.composer:focus-within {
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
 }
 
-.input-container textarea {
+.input-container textarea,
+.composer textarea {
     flex: 1;
     background: none;
     border: none;
@@ -806,10 +810,32 @@ input, textarea, select {
     resize: none;
     max-height: 200px;
     padding: 4px 0;
+    font-family: inherit;
 }
 
-.input-container textarea::placeholder {
+.input-container textarea::placeholder,
+.composer textarea::placeholder {
     color: var(--text-muted);
+}
+
+.composer-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.composer-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 .send-btn {

@@ -95,8 +95,22 @@ function setupSidebarNav() {
     });
 }
 function hideAllPanels() { el.chatsPanel?.classList.add('hidden'); el.toolsPanel?.classList.add('hidden'); el.downloadersPanel?.classList.add('hidden'); }
-function toggleSidebar() { el.sidebar?.classList.toggle('collapsed'); el.sidebarOverlay?.classList.toggle('active'); }
-function closeSidebar() { el.sidebar?.classList.remove('collapsed'); el.sidebarOverlay?.classList.remove('active'); }
+function toggleSidebar() {
+    if (!el.sidebar) return;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        el.sidebar.classList.toggle('active');
+        el.sidebarOverlay?.classList.toggle('active');
+    } else {
+        el.sidebar.classList.toggle('collapsed');
+    }
+}
+function closeSidebar() {
+    if (!el.sidebar) return;
+    el.sidebar.classList.remove('active');
+    el.sidebar.classList.remove('collapsed');
+    el.sidebarOverlay?.classList.remove('active');
+}
 
 function showPanel(p) { showChatView(); }
 
