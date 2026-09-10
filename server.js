@@ -18,11 +18,35 @@ app.use((req, res, next) => {
 });
 
 // ========================================
-// DATABASE
+// DATABASE - File-based persistence
 // ========================================
-const inMemoryDB = {};
+var DB_PATH = process.env.VERCEL === '1' ? '/tmp/db_data.json' : path.join(__dirname, 'db_data.json');
+var inMemoryDB = {};
+
+function loadDB() {
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            var raw = fs.readFileSync(DB_PATH, 'utf8');
+            inMemoryDB = JSON.parse(raw);
+        }
+    } catch(e) {
+        console.error('DB load error:', e.message);
+        inMemoryDB = {};
+    }
+}
+
+function saveDB() {
+    try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(inMemoryDB, null, 2), 'utf8');
+    } catch(e) {
+        console.error('DB save error:', e.message);
+    }
+}
+
+loadDB();
+
 function readDB(n) { if (!inMemoryDB[n]) inMemoryDB[n] = []; return inMemoryDB[n]; }
-function writeDB(n, d) { inMemoryDB[n] = d; }
+function writeDB(n, d) { inMemoryDB[n] = d; saveDB(); }
 function genId() { return crypto.randomBytes(16).toString('hex'); }
 function hashPw(p) { return crypto.createHash('sha256').update(p).digest('hex'); }
 

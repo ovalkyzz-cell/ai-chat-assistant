@@ -1,4 +1,4 @@
-<script>var _au=localStorage.getItem('mazval_user');if(!_au){document.write('<script>location.href="login.html"<\/script>');throw'x';}</script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,6 +11,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body class="payment-page">
+    <div id="authBlock" style="display:none;position:fixed;inset:0;z-index:99999;background:#0a0a0a;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;color:white;">
+            <i class="fas fa-lock" style="font-size:48px;margin-bottom:16px;color:#10a37f;"></i>
+            <p>Redirecting to login...</p>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <nav class="payment-nav">
         <div class="nav-brand">
@@ -266,7 +273,20 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
+    <script>
+    (function() {
+        var u = null;
+        try { u = JSON.parse(localStorage.getItem('mazval_user')); } catch(e) {}
+        if (!u) {
+            document.getElementById('authBlock').style.display = 'flex';
+            window.location.href = 'login.html';
+            return;
+        }
+        document.getElementById('authBlock').style.display = 'none';
+    })();
+    </script>
     <script src="js/payment.js"></script>
 </body>
 </html>

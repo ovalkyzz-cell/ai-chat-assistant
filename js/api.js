@@ -88,5 +88,22 @@ var API = {
     translate: function(t, to, f) { return this.get('/api/tools/translate?text=' + encodeURIComponent(t) + '&to=' + to + '&from=' + f); },
     download: function(p, u) { return this.get('/api/downloaders/' + p + '?url=' + encodeURIComponent(u)); },
     speechToText: function(audio) { return this.post('/api/speech-to-text', { audio: audio }); },
-    uploadFile: function(file, name, type) { return this.post('/api/files/upload', { file: file, name: name, type: type }); }
+    uploadFile: function(file, name, type) { return this.post('/api/files/upload', { file: file, name: name, type: type }); },
+
+    createPayment: function(plan, name, email, password, description, discountCode) {
+        return this.post('/api/payment/create', {
+            plan: plan, name: name, email: email, password: password,
+            description: description, discountCode: discountCode
+        });
+    },
+
+    checkPayment: function(transactionId) {
+        return this.post('/api/payment/check', { transaction_id: transactionId });
+    },
+
+    applyDiscount: function(code, plan) {
+        return this.post('/api/discounts/apply', { code: code, plan: plan });
+    },
+
+    getPlans: function() { return this.get('/api/plans'); }
 };

@@ -708,8 +708,46 @@
 }
 
 /* ========================================
-   Responsive
-   ======================================== */
+    Discount Input
+    ======================================== */
+.discount-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.discount-input-group input {
+    flex: 1;
+}
+
+.apply-discount-btn {
+    padding: 12px 16px;
+    background: rgba(16, 163, 127, 0.1);
+    border: 1px solid rgba(16, 163, 127, 0.3);
+    border-radius: 10px;
+    color: #10a37f;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s;
+}
+
+.apply-discount-btn:hover {
+    background: rgba(16, 163, 127, 0.2);
+}
+
+.discount-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.8rem;
+}
+
+/* ========================================
+    Responsive
+    ======================================== */
 @media (max-width: 600px) {
     .payment-nav {
         padding: 0 20px;
