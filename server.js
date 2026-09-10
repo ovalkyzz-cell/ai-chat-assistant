@@ -50,28 +50,37 @@ function writeDB(n, d) { inMemoryDB[n] = d; saveDB(); }
 function genId() { return crypto.randomBytes(16).toString('hex'); }
 function hashPw(p) { return crypto.createHash('sha256').update(p).digest('hex'); }
 
-// Token = userId + "_" + randomHex (sessionless, works on serverless)
-function createToken(userId) { return userId + '_' + genId(); }
-function getUserIdFromToken(token) {
-    if (!token) return null;
-    var parts = token.split('_');
-    if (parts.length < 2) return null;
-    return parts[0];
+// Token = base64(userId:email:role:status:plan:limit:ts)_signature (sessionless, serverless-safe)
+function createToken(user) {
+    var payload = [user.id, user.email, user.role, user.status, user.plan, user.dailyLimit, Date.now()].join(':');
+    var sig = crypto.createHash('sha256').update(payload + '_mazzval_secret').digest('hex').substring(0, 16);
+    return Buffer.from(payload).toString('base64') + '.' + sig;
+}
+
+function decodeToken(token) {
+    try {
+        var parts = token.split('.');
+        if (parts.length !== 2) return null;
+        var payload = Buffer.from(parts[0], 'base64').toString('utf8');
+        var sig = crypto.createHash('sha256').update(payload + '_mazzval_secret').digest('hex').substring(0, 16);
+        if (parts[1] !== sig) return null;
+        var d = payload.split(':');
+        if (d.length < 7) return null;
+        return { id: d[0], email: d[1], role: d[2], status: d[3], plan: d[4], dailyLimit: parseInt(d[5]), iat: parseInt(d[6]) };
+    } catch(e) { return null; }
 }
 
 // ========================================
-// AUTH MIDDLEWARE (sessionless)
+// AUTH MIDDLEWARE (sessionless, serverless-safe)
 // ========================================
 function auth(req, res, next) {
     var h = req.headers.authorization;
     if (!h || !h.startsWith('Bearer ')) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token' } });
     var token = h.split(' ')[1];
-    var userId = getUserIdFromToken(token);
-    if (!userId) return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } });
-    var users = readDB('users');
-    var u = users.find(function(x) { return x.id === userId; });
-    if (!u) return res.status(401).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
-    req.user = u;
+    var ud = decodeToken(token);
+    if (!ud) return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Invalid token' } });
+    // Attach user from token (no DB lookup needed for auth!)
+    req.user = { id: ud.id, email: ud.email, role: ud.role, status: ud.status, plan: ud.plan, dailyLimit: ud.dailyLimit };
     next();
 }
 
@@ -109,14 +118,14 @@ app.post('/api/auth/login', (req, res) => {
             users.push(admin);
             writeDB('users', users);
         }
-        var token = createToken(admin.id);
+        var token = createToken(admin);
         return res.json({ success: true, data: { token, user: { id: admin.id, name: admin.name, email: admin.email, role: admin.role, status: admin.status, plan: admin.plan } } });
     }
 
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (!user || user.password !== hashPw(password)) return res.status(401).json({ success: false, error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } });
 
-    var token = createToken(user.id);
+    var token = createToken(user);
     res.json({ success: true, data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status, plan: user.plan } } });
 });
 
