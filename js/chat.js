@@ -343,8 +343,11 @@ function renderMarkdown(text) {
         .replace(/^# (.+)$/gm, '<h1>$1</h1>')
         .replace(/^\- (.+)$/gm, '<li>$1</li>')
         .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="msg-image" style="max-width:100%;border-radius:8px;margin:8px 0">')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+            const safeUrl = /^(https?:\/\/|data:)/i.test(src) ? src : '';
+            return safeUrl ? `<img src="${safeUrl}" alt="${alt}" class="msg-image" style="max-width:100%;border-radius:8px;margin:8px 0">` : '';
+        })
         .replace(/\n/g, '<br>');
     return html;
 }
@@ -497,8 +500,15 @@ function cancelRecording() {
 }
 
 async function processAudio() {
-    if (!audioChunks.length) return;
+    if (!audioChunks.length || audioChunks.every(c => c.size === 0)) {
+        showToast('No audio recorded', 'warning');
+        return;
+    }
     const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    if (blob.size === 0) {
+        showToast('No audio recorded', 'warning');
+        return;
+    }
     const reader = new FileReader();
     reader.onloadend = async () => {
         const base64 = reader.result.split(',')[1];
@@ -558,19 +568,6 @@ async function handleLogout() {
     localStorage.removeItem('mazval_user');
     localStorage.removeItem('mazval_token');
     window.location.href = 'login.html';
-}
-
-// ========================================
-// UTILS
-// ========================================
-function escHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
-function showToast(msg, type) {
-    const t = document.createElement('div');
-    t.className = 'toast ' + (type || 'info');
-    const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-circle', info: 'fa-info-circle' };
-    t.innerHTML = `<i class="fas ${icons[type] || 'fa-info-circle'}"></i><span>${msg}</span>`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

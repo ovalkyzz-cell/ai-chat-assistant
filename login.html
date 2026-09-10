@@ -53,18 +53,9 @@
         </div>
     </div>
 
+    <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
     <script>
-    // Simple Toast
-    function showToast(msg, type) {
-        var t = document.createElement('div');
-        t.className = 'toast ' + (type || 'info');
-        var icons = {success:'fa-check-circle',error:'fa-times-circle',warning:'fa-exclamation-circle'};
-        t.innerHTML = '<i class="fas ' + (icons[type]||'fa-info-circle') + '"></i><span>' + msg + '</span>';
-        document.body.appendChild(t);
-        setTimeout(function(){ t.remove(); }, 4000);
-    }
-
     // Check if already logged in
     (function() {
         var s = localStorage.getItem('mazval_user');

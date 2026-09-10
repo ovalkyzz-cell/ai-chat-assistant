@@ -68,10 +68,13 @@ app.post('/api/auth/login', (req, res) => {
     if (!email || !password) return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Email and password required' } });
     const users = readDB('users');
 
-    if (email === 'admin@mazzvall.com' && password === 'Admin@Secure123!') {
-        let admin = users.find(u => u.email === 'admin@mazzvall.com');
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@mazzvall.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@Secure123!';
+    
+    if (email === adminEmail && password === adminPassword) {
+        let admin = users.find(u => u.email === adminEmail);
         if (!admin) {
-            admin = { id: 'admin_001', name: 'Admin', email: 'admin@mazzvall.com', password: hashPw(password), role: 'admin', status: 'approved', plan: 'premium', dailyLimit: -1, createdAt: new Date().toISOString() };
+            admin = { id: 'admin_001', name: 'Admin', email: adminEmail, password: hashPw(password), role: 'admin', status: 'approved', plan: 'premium', dailyLimit: -1, createdAt: new Date().toISOString() };
             users.push(admin);
             writeDB('users', users);
         }
@@ -305,13 +308,19 @@ app.post('/api/speech-to-text', auth, async (req, res) => {
 app.post('/api/files/upload', auth, (req, res) => {
     const { file, name, type } = req.body;
     if (!file || !name) return res.status(400).json({ success: false, error: { code: 'MISSING_FILE', message: 'File data required' } });
-    const allowed = ['image/', 'text/', 'application/pdf', 'application/zip'];
-    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi'];
+    
+    const maxSize = 10 * 1024 * 1024;
+    const base64Length = file.length;
+    const decodedSize = Math.ceil(base64Length * 3 / 4);
+    if (decodedSize > maxSize) return res.status(400).json({ success: false, error: { code: 'FILE_TOO_LARGE', message: 'File too large (max 10MB)' } });
+    
+    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.com', '.scr', '.vbs', '.js'];
     const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
     if (blocked.includes(ext)) return res.status(400).json({ success: false, error: { code: 'BLOCKED', message: 'File type not allowed' } });
+    
     const id = genId();
     const files = readDB('files');
-    files.push({ id, userId: req.user.id, name, type: type || 'application/octet-stream', size: file.length, data: file, createdAt: new Date().toISOString() });
+    files.push({ id, userId: req.user.id, name, type: type || 'application/octet-stream', size: decodedSize, data: file, createdAt: new Date().toISOString() });
     writeDB('files', files);
     res.json({ success: true, data: { id, name, type, url: `data:${type};base64,${file}` } });
 });
@@ -357,23 +366,23 @@ app.post('/api/payment/create', auth, async (req, res) => {
 
 app.post('/api/payment/check', auth, async (req, res) => {
     try {
+        const txns = readDB('transactions');
+        const tx = txns.find(t => t.id === req.body.transaction_id && t.userId === req.user.id);
+        if (!tx) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Transaction not found' } });
+        
         const r = await fetch('https://api.buatqris.site', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ action: 'api_check_status', account_id: process.env.QRIS_ACCOUNT_ID || '', secret_token: process.env.QRIS_SECRET_TOKEN || '', transaction_id: req.body.transaction_id }) });
         const d = await r.json();
         if (d.success && d.data) {
-            if (d.data.status === 'success') {
-                const txns = readDB('transactions');
-                const tx = txns.find(t => t.id === req.body.transaction_id);
-                if (tx && tx.status !== 'success') {
-                    tx.status = 'success';
-                    writeDB('transactions', txns);
-                    const users = readDB('users');
-                    let u = users.find(x => x.email === tx.email);
-                    if (!u && tx.password) {
-                        u = { id: genId(), name: tx.name, email: tx.email, password: tx.password, role: 'user', status: 'approved', plan: tx.plan, dailyLimit: tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100, createdAt: new Date().toISOString() };
-                        users.push(u);
-                    } else if (u) { u.status = 'approved'; u.plan = tx.plan; u.dailyLimit = tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100; }
-                    writeDB('users', users);
-                }
+            if (d.data.status === 'success' && tx.status !== 'success') {
+                tx.status = 'success';
+                writeDB('transactions', txns);
+                const users = readDB('users');
+                let u = users.find(x => x.email === tx.email);
+                if (!u && tx.password) {
+                    u = { id: genId(), name: tx.name, email: tx.email, password: tx.password, role: 'user', status: 'approved', plan: tx.plan, dailyLimit: tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100, createdAt: new Date().toISOString() };
+                    users.push(u);
+                } else if (u) { u.status = 'approved'; u.plan = tx.plan; u.dailyLimit = tx.plan === 'premium' || tx.plan === 'reseller' ? -1 : tx.plan === 'pro' ? 500 : 100; }
+                writeDB('users', users);
             }
             res.json({ success: true, data: d.data });
         } else throw new Error(d.message || 'Failed');
@@ -385,13 +394,15 @@ app.post('/api/payment/check', auth, async (req, res) => {
 // ========================================
 app.post('/api/discounts/apply', auth, (req, res) => {
     const { code, plan } = req.body;
-    if (!code || !code.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID_CODE', message: 'Code must start with GOVAL-' } });
+    if (!code) return res.status(400).json({ success: false, error: { code: 'MISSING_CODE', message: 'Discount code required' } });
+    const normalizedCode = code.toUpperCase().trim();
+    if (!normalizedCode.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID_CODE', message: 'Code must start with GOVAL-' } });
     const codes = readDB('discountCodes');
-    const c = codes.find(x => x.code === code.toUpperCase() && x.active);
-    if (!c) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Invalid code' } });
+    const c = codes.find(x => x.code === normalizedCode && x.active);
+    if (!c) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Invalid or expired code' } });
     const PRICES = { basic: 10000, pro: 20000, premium: 35000, reseller: 50000 };
     const p = PRICES[plan] || 0;
-    const amt = c.type === 'percent' ? Math.floor(p * (c.discount / 100)) : c.discount;
+    const amt = c.type === 'percent' ? Math.floor(p * (c.discount / 100)) : Math.min(c.discount, p);
     res.json({ success: true, data: { code: c.code, discount: amt, type: c.type, value: c.discount } });
 });
 
@@ -435,10 +446,14 @@ app.get('/api/admin/discounts', auth, adminAuth, (req, res) => {
 
 app.post('/api/admin/discounts', auth, adminAuth, (req, res) => {
     const { code, discount, type } = req.body;
-    if (!code || !code.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID', message: 'Code must start with GOVAL-' } });
+    if (!code) return res.status(400).json({ success: false, error: { code: 'MISSING', message: 'Code required' } });
+    const normalizedCode = code.toUpperCase().trim();
+    if (!normalizedCode.startsWith('GOVAL-')) return res.status(400).json({ success: false, error: { code: 'INVALID', message: 'Code must start with GOVAL-' } });
     const codes = readDB('discountCodes');
-    if (codes.find(c => c.code === code.toUpperCase())) return res.status(400).json({ success: false, error: { code: 'EXISTS', message: 'Code exists' } });
-    codes.push({ code: code.toUpperCase(), discount: parseInt(discount), type: type || 'percent', active: true, createdAt: new Date().toISOString() });
+    if (codes.find(c => c.code === normalizedCode)) return res.status(400).json({ success: false, error: { code: 'EXISTS', message: 'Code already exists' } });
+    const discountValue = parseInt(discount);
+    if (isNaN(discountValue) || discountValue <= 0) return res.status(400).json({ success: false, error: { code: 'INVALID', message: 'Invalid discount value' } });
+    codes.push({ code: normalizedCode, discount: discountValue, type: type === 'fixed' ? 'fixed' : 'percent', active: true, createdAt: new Date().toISOString() });
     writeDB('discountCodes', codes);
     res.json({ success: true, data: { message: 'Created' } });
 });
