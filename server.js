@@ -384,7 +384,13 @@ app.post('/api/payment/create', auth, async (req, res) => {
         if (c) amount = c.type === 'percent' ? Math.floor(amount * (1 - c.discount / 100)) : Math.max(0, amount - c.discount);
     }
     try {
-        const r = await fetch('https://api.buatqris.site', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ action: 'api_create_qris', account_id: process.env.QRIS_ACCOUNT_ID || '', secret_token: process.env.QRIS_SECRET_TOKEN || '', amount: amount.toString(), description: description || `Payment for ${pd.name}`, qris_method: 'qris_two', fee_by: 'user' }) });
+        var qrisAccountId = process.env.QRIS_ACCOUNT_ID;
+        var qrisSecret = process.env.QRIS_SECRET_TOKEN;
+        console.log('QRIS env check:', { hasAccountId: !!qrisAccountId, hasSecret: !!qrisSecret });
+        if (!qrisAccountId || !qrisSecret) {
+            return res.status(500).json({ success: false, error: { code: 'CONFIG_ERROR', message: 'QRIS credentials not configured' } });
+        }
+        const r = await fetch('https://api.buatqris.site', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ action: 'api_create_qris', account_id: qrisAccountId, secret_token: qrisSecret, amount: amount.toString(), description: description || ('Payment for ' + pd.name), qris_method: 'qris_two', fee_by: 'user' }) });
         const d = await r.json();
         if (d.success && d.data) {
             const txns = readDB('transactions');
@@ -392,7 +398,7 @@ app.post('/api/payment/create', auth, async (req, res) => {
             writeDB('transactions', txns);
             res.json({ success: true, data: d.data });
         } else throw new Error(d.message || 'Failed');
-    } catch (e) { res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Payment failed' } }); }
+    } catch (e) { console.error('QRIS Error:', e.message, e.stack); res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Payment failed: ' + e.message } }); }
 });
 
 app.post('/api/payment/check', auth, async (req, res) => {
