@@ -146,7 +146,7 @@ input, textarea, select {
 
 .new-chat-btn {
     width: 100%;
-    padding: 12px 16px;
+    padding: 10px 16px;
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
@@ -154,18 +154,61 @@ input, textarea, select {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     transition: all var(--transition-fast);
 }
 
 .new-chat-btn:hover {
     background-color: var(--bg-hover);
+    border-color: var(--accent-primary);
 }
 
 .sidebar-content {
     flex: 1;
     overflow-y: auto;
     padding: 12px;
+}
+
+.sidebar-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.search-box {
+    position: relative;
+    padding: 0 12px;
+    margin-bottom: 8px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: all var(--transition-fast);
+}
+
+.search-box input:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+}
+
+.search-box input::placeholder {
+    color: var(--text-muted);
 }
 
 .history-section {
@@ -200,13 +243,21 @@ input, textarea, select {
     background-color: var(--bg-tertiary);
 }
 
+.chat-item-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .chat-item-icon {
     color: var(--text-muted);
     font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
-.chat-item-text {
-    flex: 1;
+.chat-item-title {
     font-size: 0.875rem;
     color: var(--text-secondary);
     white-space: nowrap;
@@ -214,22 +265,39 @@ input, textarea, select {
     text-overflow: ellipsis;
 }
 
-.chat-item.active .chat-item-text {
+.chat-item.active .chat-item-title {
     color: var(--text-primary);
 }
 
-.chat-item-delete {
+.chat-item-actions {
+    display: flex;
+    gap: 4px;
     opacity: 0;
-    color: var(--text-muted);
     transition: opacity var(--transition-fast);
-    padding: 4px;
 }
 
-.chat-item:hover .chat-item-delete {
+.chat-item:hover .chat-item-actions {
     opacity: 1;
 }
 
-.chat-item-delete:hover {
+.chat-item-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    transition: all var(--transition-fast);
+}
+
+.chat-item-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.chat-item-btn.delete-btn:hover {
     color: var(--danger);
 }
 
@@ -238,41 +306,42 @@ input, textarea, select {
     border-top: 1px solid var(--border-light);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
-.upgrade-btn {
+.sidebar-link {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px;
-    background: linear-gradient(135deg, #f59e0b, #f97316);
+    gap: 10px;
+    padding: 10px 12px;
     border-radius: var(--radius-md);
-    color: white;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
     transition: all var(--transition-fast);
 }
 
-.upgrade-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-    color: white;
+.sidebar-link:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
-.sidebar-footer > .user-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+.sidebar-link i {
+    width: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background-color: var(--border-light);
+    margin: 4px 0;
 }
 
 .user-info {
     display: flex;
     align-items: center;
     gap: 10px;
+    padding: 8px 12px;
 }
 
 .user-avatar {
@@ -284,26 +353,32 @@ input, textarea, select {
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 .user-name {
     font-size: 0.875rem;
     color: var(--text-secondary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .logout-btn {
-    width: 32px;
-    height: 32px;
+    width: 100%;
+    padding: 10px 12px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
     color: var(--text-muted);
     border-radius: var(--radius-md);
+    font-size: 0.875rem;
     transition: all var(--transition-fast);
 }
 
 .logout-btn:hover {
-    background-color: var(--bg-tertiary);
+    background-color: rgba(239, 68, 68, 0.1);
     color: var(--danger);
 }
 
@@ -364,7 +439,7 @@ input, textarea, select {
     align-items: center;
     gap: 8px;
     padding: 8px 14px;
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     cursor: pointer;
@@ -374,9 +449,7 @@ input, textarea, select {
 
 .model-current:hover {
     border-color: var(--accent-primary);
-    background: linear-gradient(135deg, var(--bg-hover), var(--bg-tertiary));
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 163, 127, 0.15);
+    background: var(--bg-hover);
 }
 
 .model-current .model-icon {
@@ -392,7 +465,7 @@ input, textarea, select {
 }
 
 .model-current .model-name {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-primary);
 }
@@ -425,7 +498,7 @@ input, textarea, select {
     overflow: hidden;
 }
 
-.model-selector.open .model-dropdown {
+.model-dropdown.active {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
@@ -464,7 +537,7 @@ input, textarea, select {
 }
 
 .model-option.active {
-    background: linear-gradient(135deg, rgba(16, 163, 127, 0.15), rgba(16, 163, 127, 0.05));
+    background: rgba(16, 163, 127, 0.1);
     color: var(--accent-primary);
 }
 
@@ -486,12 +559,12 @@ input, textarea, select {
 }
 
 .model-option:hover .model-icon {
-    transform: scale(1.1);
+    transform: scale(1.05);
     background: var(--bg-active);
 }
 
 .model-option span:last-child {
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     font-weight: 500;
 }
 
@@ -513,6 +586,7 @@ input, textarea, select {
     height: 100%;
     text-align: center;
     animation: fadeIn 0.5s ease;
+    padding: 20px;
 }
 
 @keyframes fadeIn {
@@ -554,7 +628,7 @@ input, textarea, select {
     color: white;
 }
 
-.welcome-screen h2 {
+.welcome-screen h1 {
     font-size: 1.75rem;
     font-weight: 600;
     margin-bottom: 8px;
@@ -564,9 +638,11 @@ input, textarea, select {
 .welcome-screen p {
     color: var(--text-muted);
     margin-bottom: 32px;
+    font-size: 0.95rem;
 }
 
-.suggestion-cards {
+.suggestion-cards,
+.suggestions-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -575,7 +651,7 @@ input, textarea, select {
 }
 
 .suggestion-card {
-    padding: 16px;
+    padding: 14px 16px;
     background-color: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -589,12 +665,13 @@ input, textarea, select {
 .suggestion-card:hover {
     background-color: var(--bg-hover);
     border-color: var(--accent-primary);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .suggestion-card i {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: var(--accent-primary);
+    flex-shrink: 0;
 }
 
 .suggestion-card span {
@@ -796,7 +873,7 @@ input, textarea, select {
 .input-container:focus-within,
 .composer:focus-within {
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
+    box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.15);
 }
 
 .input-container textarea,
@@ -809,7 +886,7 @@ input, textarea, select {
     line-height: 1.5;
     resize: none;
     max-height: 200px;
-    padding: 4px 0;
+    padding: 6px 0;
     font-family: inherit;
 }
 
@@ -962,7 +1039,8 @@ input, textarea, select {
         transform: translateX(0);
     }
 
-    .suggestion-cards {
+    .suggestion-cards,
+    .suggestions-grid {
         grid-template-columns: 1fr;
     }
 
@@ -970,8 +1048,13 @@ input, textarea, select {
         display: none;
     }
 
-    .welcome-screen h2 {
+    .welcome-screen h1 {
         font-size: 1.25rem;
+    }
+
+    .welcome-logo {
+        width: 60px;
+        height: 60px;
     }
 
     .welcome-icon {
@@ -981,6 +1064,15 @@ input, textarea, select {
 
     .welcome-icon i {
         font-size: 1.75rem;
+    }
+
+    .model-current {
+        min-width: auto;
+        padding: 8px 12px;
+    }
+
+    .model-current .model-name {
+        display: none;
     }
 }
 
@@ -1061,19 +1153,21 @@ input, textarea, select {
     align-items: center;
     gap: 10px;
     margin-bottom: 12px;
-    padding: 8px 0;
+    padding: 4px 0;
 }
 
 .logo-img {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: var(--radius-md);
+    object-fit: contain;
 }
 
 .logo-text {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text-primary);
+    letter-spacing: -0.3px;
 }
 
 /* ========================================
@@ -1088,12 +1182,13 @@ input, textarea, select {
 
 .nav-tab {
     flex: 1;
-    padding: 8px 12px;
+    padding: 8px 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     font-size: 0.8rem;
+    font-weight: 500;
     color: var(--text-muted);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
@@ -1114,8 +1209,15 @@ input, textarea, select {
 }
 
 /* ========================================
-   Tools List
+   Tools & Panel List
    ======================================== */
+.panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+}
+
 .tools-list {
     display: flex;
     flex-direction: column;
@@ -1123,7 +1225,7 @@ input, textarea, select {
 }
 
 .tool-item {
-    padding: 12px 16px;
+    padding: 10px 12px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1177,9 +1279,18 @@ input, textarea, select {
 /* ========================================
    Welcome Icon with Image
    ======================================== */
+.welcome-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-xl);
+    object-fit: contain;
+    margin-bottom: 24px;
+    animation: pulse 2s infinite;
+}
+
 .welcome-icon {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     background: transparent;
     border-radius: var(--radius-xl);
     display: flex;
@@ -1198,6 +1309,36 @@ input, textarea, select {
 /* ========================================
    Tool Interface
    ======================================== */
+.tool-interface-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.tool-interface-header .back-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.tool-interface-header .back-btn:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.tool-interface-header h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .tool-interface {
     max-width: 800px;
     margin: 0 auto;

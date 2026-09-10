@@ -119,8 +119,15 @@ function showPanel(p) { showChatView(); }
 // ========================================
 function setupModelSelector() {
     if (!el.modelCurrent || !el.modelDropdown) return;
-    el.modelCurrent.addEventListener('click', (e) => { e.stopPropagation(); el.modelDropdown.classList.toggle('active'); });
-    document.addEventListener('click', () => el.modelDropdown?.classList.remove('active'));
+    el.modelCurrent.addEventListener('click', (e) => {
+        e.stopPropagation();
+        el.modelDropdown.classList.toggle('active');
+        el.modelSelector?.classList.toggle('open');
+    });
+    document.addEventListener('click', () => {
+        el.modelDropdown?.classList.remove('active');
+        el.modelSelector?.classList.remove('open');
+    });
     el.modelDropdown.addEventListener('click', (e) => e.stopPropagation());
     document.querySelectorAll('.model-option').forEach(opt => {
         opt.addEventListener('click', () => {
@@ -128,6 +135,7 @@ function setupModelSelector() {
             ChatState.currentModel = m;
             el.modelCurrent.querySelector('.model-name').textContent = opt.querySelector('.model-name').textContent;
             el.modelDropdown.classList.remove('active');
+            el.modelSelector?.classList.remove('open');
             document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
         });
