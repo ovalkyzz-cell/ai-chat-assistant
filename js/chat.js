@@ -59,12 +59,26 @@ function setupEventListeners() {
     if (el.sidebarToggle) el.sidebarToggle.addEventListener('click', toggleSidebar);
     if (el.sidebarOverlay) el.sidebarOverlay.addEventListener('click', closeSidebar);
     if (el.newChatBtn) el.newChatBtn.addEventListener('click', () => { showChatView(); createNewChat(); });
-    if (el.messageInput) { el.messageInput.addEventListener('input', handleInputChange); el.messageInput.addEventListener('keydown', handleKeyDown); }
-    if (el.sendBtn) el.sendBtn.addEventListener('click', sendMessage);
+    if (el.messageInput) {
+        el.messageInput.addEventListener('input', handleInputChange);
+        el.messageInput.addEventListener('keydown', handleKeyDown);
+    }
+    if (el.sendBtn) {
+        el.sendBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            sendMessage();
+        });
+    }
     if (el.backToChat) el.backToChat.addEventListener('click', showChatView);
     if (el.logoutBtn) el.logoutBtn.addEventListener('click', handleLogout);
     if (el.historySearch) el.historySearch.addEventListener('input', (e) => loadConversations(e.target.value));
-    document.querySelectorAll('.suggestion-card').forEach(c => c.addEventListener('click', () => { if (el.messageInput) { el.messageInput.value = c.dataset.prompt; handleInputChange(); sendMessage(); } }));
+    document.querySelectorAll('.suggestion-card').forEach(c => c.addEventListener('click', () => {
+        if (el.messageInput) {
+            el.messageInput.value = c.dataset.prompt;
+            handleInputChange();
+            sendMessage();
+        }
+    }));
     document.querySelectorAll('.sidebar-link[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -367,30 +381,42 @@ function scrollToBottom() { if (el.messagesContainer) el.messagesContainer.scrol
 // ========================================
 async function sendMessage() {
     const msg = el.messageInput?.value?.trim();
-    if (!msg || ChatState.isGenerating) return;
+    if (!msg) return;
+    if (ChatState.isGenerating) return;
+
+    const userMsg = msg;
+    el.messageInput.value = '';
+    el.messageInput.style.height = 'auto';
+    handleInputChange();
 
     if (!ChatState.currentChatId) {
         try {
-            const data = await API.createConversation(msg.substring(0, 50), ChatState.currentModel);
+            const data = await API.createConversation(userMsg.substring(0, 50), ChatState.currentModel);
             ChatState.currentChatId = data.data.id;
             await loadConversations();
-        } catch (e) { showToast('Failed to create chat', 'error'); return; }
+        } catch (e) {
+            showToast('Failed to create chat', 'error');
+            el.messageInput.value = userMsg;
+            handleInputChange();
+            return;
+        }
     }
 
-    el.messageInput.value = '';
-    handleInputChange();
-    appendMessage('user', msg);
+    appendMessage('user', userMsg);
     scrollToBottom();
 
     ChatState.isGenerating = true;
     showGeneratingState();
 
     try {
-        const data = await API.sendMessage(ChatState.currentChatId, msg, ChatState.currentModel);
+        const data = await API.sendMessage(ChatState.currentChatId, userMsg, ChatState.currentModel);
         ChatState.isGenerating = false;
         hideGeneratingState();
-        if (data.data?.message) {
+        if (data.success && data.data?.message) {
             appendMessage('assistant', data.data.message.content, data.data.message.model, data.data.message.id);
+            scrollToBottom();
+        } else {
+            appendMessage('assistant', 'Maaf, saya tidak bisa memproses permintaan Anda. Silakan coba lagi.');
             scrollToBottom();
         }
         if (data.data?.conversation?.title) {
@@ -399,9 +425,11 @@ async function sendMessage() {
             renderChatList();
         }
     } catch (e) {
+        console.error('Send message error:', e);
         ChatState.isGenerating = false;
         hideGeneratingState();
-        appendMessage('assistant', '⚠️ Error: ' + (e?.error?.message || 'Failed to get response. Please try again.'));
+        const errMsg = e?.error?.message || e?.message || 'Gagal mendapatkan respons. Silakan coba lagi.';
+        appendMessage('assistant', '⚠️ Error: ' + errMsg);
         scrollToBottom();
     }
 }
@@ -445,15 +473,19 @@ function showWelcome() {
 // INPUT HANDLERS
 // ========================================
 function handleInputChange() {
-    if (!el.messageInput || !el.sendBtn) return;
-    const hasText = el.messageInput.value.trim().length > 0;
-    el.sendBtn.disabled = !hasText;
+    if (!el.messageInput) return;
     el.messageInput.style.height = 'auto';
     el.messageInput.style.height = Math.min(el.messageInput.scrollHeight, 200) + 'px';
 }
 
 function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!ChatState.isGenerating && el.messageInput?.value?.trim()) {
+            sendMessage();
+        }
+    }
 }
 
 // ========================================
